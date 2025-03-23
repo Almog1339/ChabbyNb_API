@@ -6,7 +6,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -17,6 +17,7 @@ using System.Net;
 using ChabbyNb_API.Data;
 using ChabbyNb_API.Models;
 using ChabbyNb_API.Models.DTOs;
+using ChabbyNb_API.Services;
 
 namespace ChabbyNb_API.Controllers
 {
@@ -26,11 +27,15 @@ namespace ChabbyNb_API.Controllers
     {
         private readonly ChabbyNbDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly JwtTokenService _jwtTokenService;
 
-        public AccountController(ChabbyNbDbContext context, IConfiguration configuration)
+        public AccountController(
+            ChabbyNbDbContext context,
+            IConfiguration configuration)
         {
             _context = context;
             _configuration = configuration;
+            _jwtTokenService = new JwtTokenService(configuration);
         }
 
         // POST: api/Account/Login
@@ -82,35 +87,22 @@ namespace ChabbyNb_API.Controllers
 
             if (user != null)
             {
-                // Create authentication using ASP.NET Core Identity
-                var claims = new List<Claim>
+                // Generate JWT Token
+                string token = _jwtTokenService.GenerateJwtToken(user);
+
+                // For backward compatibility, still store some basic information in session
+                if (model.RememberMe)
                 {
-                    new Claim(ClaimTypes.Name, user.Email),
-                    new Claim(ClaimTypes.NameIdentifier, user.UserID.ToString()),
-                    new Claim("IsAdmin", user.IsAdmin.ToString())
-                };
-
-                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                var authProperties = new AuthenticationProperties
-                {
-                    IsPersistent = model.RememberMe,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
-                };
-
-                await HttpContext.SignInAsync(
-                    CookieAuthenticationDefaults.AuthenticationScheme,
-                    new ClaimsPrincipal(claimsIdentity),
-                    authProperties);
-
-                // Store user data in session
-                HttpContext.Session.SetInt32("UserID", user.UserID);
-                HttpContext.Session.SetString("FirstName", user.FirstName ?? "");
-                HttpContext.Session.SetString("LastName", user.LastName ?? "");
-                HttpContext.Session.SetString("IsAdmin", user.IsAdmin.ToString());
+                    HttpContext.Session.SetInt32("UserID", user.UserID);
+                    HttpContext.Session.SetString("FirstName", user.FirstName ?? "");
+                    HttpContext.Session.SetString("LastName", user.LastName ?? "");
+                    HttpContext.Session.SetString("IsAdmin", user.IsAdmin.ToString());
+                }
 
                 return Ok(new LoginResultDto
                 {
                     Success = true,
+                    Token = token,
                     UserId = user.UserID,
                     Email = user.Email,
                     FirstName = user.FirstName,
@@ -131,7 +123,7 @@ namespace ChabbyNb_API.Controllers
             if (ModelState.IsValid)
             {
                 // Check if email already exists
-                if (await _context.Users.AnyAsync(u => u.Email == model.Email) || await _context.Users.AnyAsync(u => u.PhoneNumber == model.PhoneNumber))
+                if (await _context.Users.AnyAsync(u => u.Email == model.Email))
                 {
                     return BadRequest(new { error = "This email is already registered." });
                 }
@@ -147,11 +139,11 @@ namespace ChabbyNb_API.Controllers
                     IsAdmin = false,
                     CreatedDate = DateTime.Now,
                     IsEmailVerified = false,
-                    Username = model.Email.Split('@')[0] // Default username from email
+                    Username = model.Username ?? model.Email.Split('@')[0] // Default username from email
                 };
 
-                    _context.Users.Add(user);
-                    await _context.SaveChangesAsync();
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
 
                 // Generate verification token and send email
                 if (await SendVerificationEmailAsync(user))
@@ -187,6 +179,9 @@ namespace ChabbyNb_API.Controllers
                     IsVerified = false,
                     CreatedDate = DateTime.Now
                 };
+
+                _context.EmailVerifications.Add(verification);
+                await _context.SaveChangesAsync();
 
                 // Build verification link
                 string verificationLink = $"{Request.Scheme}://{Request.Host}/api/Account/VerifyEmail/{token}";
@@ -232,42 +227,61 @@ namespace ChabbyNb_API.Controllers
                 // Get SMTP settings from configuration
                 var smtpSettings = _configuration.GetSection("SmtpSettings");
 
+                // Check if we should send real emails
+                if (!_configuration.GetValue<bool>("SendRealEmails", false))
+                {
+                    // For development, just log the email
+                    Console.WriteLine($"Email would be sent to: {user.Email}");
+                    Console.WriteLine($"Subject: {subject}");
+                    Console.WriteLine($"Verification Link: {verificationLink}");
+                    return true;
+                }
+
                 // Configure and send email
                 using (var client = new SmtpClient())
                 {
-                    client.Host = smtpSettings["Host"] ?? "smtp.example.com";
+                    // Set up the SMTP client
+                    client.Host = smtpSettings["Host"];
                     client.Port = int.Parse(smtpSettings["Port"] ?? "587");
                     client.EnableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
                     client.DeliveryMethod = SmtpDeliveryMethod.Network;
                     client.UseDefaultCredentials = false;
-                    client.Credentials = new NetworkCredential(
-                        smtpSettings["Username"] ?? "noreply@chabbnb.com",
-                        smtpSettings["Password"] ?? "password");
 
+                    // Make sure credentials are correctly set
+                    string username = smtpSettings["Username"];
+                    string password = smtpSettings["Password"];
+
+                    if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+                    {
+                        throw new InvalidOperationException("SMTP username or password is not configured.");
+                    }
+
+                    client.Credentials = new NetworkCredential(username, password);
+
+                    // Create the email message
                     using (var message = new MailMessage())
                     {
-                        message.From = new MailAddress(smtpSettings["FromEmail"] ?? "noreply@chabbnb.com", "ChabbyNb");
+                        message.From = new MailAddress(smtpSettings["FromEmail"], "ChabbyNb");
                         message.Subject = subject;
                         message.Body = body;
                         message.IsBodyHtml = true;
                         message.To.Add(new MailAddress(user.Email));
 
-                        // In a development environment, we'll log instead of sending
-                        if (_configuration.GetValue<bool>("SendRealEmails", true))
-                        {
-                            
-                        }
-                        else
+                        try
                         {
                             await client.SendMailAsync(message);
-                            // For development, just log the email
-                            Console.WriteLine($"Email would be sent to: {user.Email}");
-                            Console.WriteLine($"Subject: {subject}");
-                            Console.WriteLine($"Verification Link: {verificationLink}");
+                            Console.WriteLine($"Email sent successfully to {user.Email}");
+                            return true;
                         }
-                        _context.EmailVerifications.Add(verification);
-                        await _context.SaveChangesAsync();
-                        return true;
+                        catch (Exception ex)
+                        {
+                            Console.Error.WriteLine($"Failed to send email: {ex.Message}");
+                            if (ex.InnerException != null)
+                            {
+                                Console.Error.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                            }
+                            throw;
+                        }
                     }
                 }
             }
@@ -275,6 +289,10 @@ namespace ChabbyNb_API.Controllers
             {
                 // Log the exception
                 Console.Error.WriteLine("Error sending verification email: " + ex.Message);
+                if (ex.InnerException != null)
+                {
+                    Console.Error.WriteLine("Inner exception: " + ex.InnerException.Message);
+                }
                 return false;
             }
         }
@@ -341,12 +359,13 @@ namespace ChabbyNb_API.Controllers
 
         // POST: api/Account/Logout
         [HttpPost("Logout")]
-        [Authorize]
-        public async Task<IActionResult> Logout()
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public IActionResult Logout()
         {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            // With JWT, we don't need to do anything server-side for logout
+            // The client should discard the token
 
-            // Clear session
+            // For backward compatibility, clear session
             HttpContext.Session.Clear();
 
             return Ok(new { success = true, message = "You have been logged out successfully." });
@@ -380,7 +399,7 @@ namespace ChabbyNb_API.Controllers
 
         // POST: api/Account/ChangePassword
         [HttpPost("ChangePassword")]
-        [Authorize]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto model)
         {
             if (!ModelState.IsValid)
@@ -388,10 +407,10 @@ namespace ChabbyNb_API.Controllers
                 return BadRequest(ModelState);
             }
 
-            string userEmail = User.Identity.Name;
+            int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
             string hashedCurrentPassword = HashPassword(model.CurrentPassword);
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail && u.PasswordHash == hashedCurrentPassword);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == userId && u.PasswordHash == hashedCurrentPassword);
 
             if (user == null)
             {
@@ -407,11 +426,11 @@ namespace ChabbyNb_API.Controllers
 
         // GET: api/Account/Profile
         [HttpGet("Profile")]
-        [Authorize]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<ActionResult<ProfileDto>> GetProfile()
         {
-            string userEmail = User.Identity.Name;
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+            int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == userId);
 
             if (user == null)
             {
@@ -432,13 +451,13 @@ namespace ChabbyNb_API.Controllers
 
         // PUT: api/Account/Profile
         [HttpPut("Profile")]
-        [Authorize]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> UpdateProfile([FromBody] ProfileDto model)
         {
             if (ModelState.IsValid)
             {
-                string userEmail = User.Identity.Name;
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+                int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == userId);
 
                 if (user == null)
                 {
@@ -462,7 +481,15 @@ namespace ChabbyNb_API.Controllers
                 // Update session
                 HttpContext.Session.SetString("Username", user.Username);
 
-                return Ok(new { success = true, message = "Your profile has been updated successfully." });
+                // Generate a new token with updated user information
+                string token = _jwtTokenService.GenerateJwtToken(user);
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Your profile has been updated successfully.",
+                    token = token
+                });
             }
 
             return BadRequest(ModelState);
