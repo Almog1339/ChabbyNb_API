@@ -11,6 +11,10 @@ using System.Security.Claims;
 using ChabbyNb_API.Data;
 using ChabbyNb_API.Models;
 using ChabbyNb_API.Models.DTOs;
+using System.Xml.Linq;
+using static System.Net.Mime.MediaTypeNames;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp;
 
 namespace ChabbyNb_API.Controllers
 {
@@ -97,79 +101,236 @@ namespace ChabbyNb_API.Controllers
 
         // GET: api/Admin/Amenities
         [HttpGet("Amenities")]
-        public async Task<IActionResult> Amenities()
+        public async Task<ActionResult<IEnumerable<AmenityDto>>> GetAmenities()
         {
             var amenities = await _context.Amenities
                 .OrderBy(a => a.Category)
                 .ThenBy(a => a.Name)
+                .Select(a => new AmenityDto
+                {
+                    AmenityID = a.AmenityID,
+                    Name = a.Name,
+                    IconBase64 = a.Icon != null ? Convert.ToBase64String(a.Icon) : null,
+                    IconContentType = a.IconContentType,
+                    Category = a.Category,
+                    UsageCount = a.ApartmentAmenities.Count
+                })
                 .ToListAsync();
 
             return Ok(amenities);
         }
 
-        // POST: api/Admin/Amenities
-        [HttpPost("Amenities")]
-        public async Task<IActionResult> AddAmenity([FromBody] Amenity amenity)
-        {
-            if (ModelState.IsValid)
-            {
-                _context.Amenities.Add(amenity);
-                await _context.SaveChangesAsync();
-
-                // Log the action
-                await LogAdminAction("Added a new amenity: " + amenity.Name);
-
-                return CreatedAtAction(nameof(Amenities), new { id = amenity.AmenityID }, amenity);
-            }
-            return BadRequest(ModelState);
-        }
-
         // GET: api/Admin/Amenities/{id}
         [HttpGet("Amenities/{id}")]
-        public async Task<IActionResult> GetAmenity(int id)
+        public async Task<ActionResult<AmenityDto>> GetAmenity(int id)
         {
-            var amenity = await _context.Amenities.FindAsync(id);
+            var amenity = await _context.Amenities
+                .Where(a => a.AmenityID == id)
+                .Select(a => new AmenityDto
+                {
+                    AmenityID = a.AmenityID,
+                    Name = a.Name,
+                    IconBase64 = a.Icon != null ? Convert.ToBase64String(a.Icon) : null,
+                    Category = a.Category,
+                    UsageCount = a.ApartmentAmenities.Count
+                })
+                .FirstOrDefaultAsync();
+
             if (amenity == null)
             {
                 return NotFound();
             }
-            return Ok(amenity);
+
+            return amenity;
+        }
+
+        [HttpPost("Amenities")]
+        public async Task<ActionResult<AmenityDto>> AddAmenity([FromForm] AmenityCreateDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            byte[] iconData = null;
+            string contentType = null;
+
+            if (dto.IconFile != null && dto.IconFile.Length > 0)
+            {
+                // Validate file extension
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+                var extension = Path.GetExtension(dto.IconFile.FileName).ToLowerInvariant();
+
+                if (!allowedExtensions.Contains(extension))
+                {
+                    return BadRequest(new { error = "Invalid file type. Only image files (jpg, jpeg, png, gif, webp) are allowed." });
+                }
+
+                // Validate file size (max 1MB)
+                if (dto.IconFile.Length > 1048576) // 1MB
+                {
+                    return BadRequest(new { error = "File size exceeds the maximum allowed (1MB)." });
+                }
+
+                // Get the content type
+                contentType = dto.IconFile.ContentType;
+
+                // Read the file into a byte array
+                using (var ms = new MemoryStream())
+                {
+                    await dto.IconFile.CopyToAsync(ms);
+
+                    // Optional: Resize the image to save space
+                    // (Would require ImageSharp or another library)
+
+                    iconData = ms.ToArray();
+                }
+            }
+            else
+            {
+                return BadRequest(new { error = "Icon image is required" });
+            }
+
+            var amenity = new Amenity
+            {
+                Name = dto.Name,
+                Icon = iconData,
+                IconContentType = contentType,
+                Category = dto.Category
+            };
+
+            _context.Amenities.Add(amenity);
+            await _context.SaveChangesAsync();
+
+            // Convert the binary data to a Base64 string for the response
+            string base64Icon = iconData != null ? Convert.ToBase64String(iconData) : null;
+
+            var resultDto = new AmenityDto
+            {
+                AmenityID = amenity.AmenityID,
+                Name = amenity.Name,
+                IconBase64 = base64Icon,
+                IconContentType = contentType,
+                Category = amenity.Category,
+                UsageCount = 0
+            };
+
+            return CreatedAtAction(nameof(GetAmenity), new { id = amenity.AmenityID }, resultDto);
         }
 
         // PUT: api/Admin/Amenities/{id}
         [HttpPut("Amenities/{id}")]
-        public async Task<IActionResult> EditAmenity(int id, [FromBody] Amenity amenity)
+        public async Task<ActionResult<AmenityDto>> EditAmenity(int id, [FromForm] AmenityUpdateDto dto)
         {
-            if (id != amenity.AmenityID)
+            if (id != dto.AmenityID)
             {
                 return BadRequest("ID mismatch");
             }
 
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                try
+                return BadRequest(ModelState);
+            }
+
+            var amenity = await _context.Amenities.FindAsync(id);
+
+            if (amenity == null)
+            {
+                return NotFound();
+            }
+
+            // Process the icon file if a new one was uploaded
+            if (dto.IconFile != null && dto.IconFile.Length > 0)
+            {
+                // Validate file extension
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+                var extension = Path.GetExtension(dto.IconFile.FileName).ToLowerInvariant();
+
+                if (!allowedExtensions.Contains(extension))
                 {
-                    _context.Update(amenity);
-                    await _context.SaveChangesAsync();
-
-                    // Log the action
-                    await LogAdminAction("Updated amenity: " + amenity.Name);
-
-                    return Ok(amenity);
+                    return BadRequest(new { error = "Invalid file type. Only image files (jpg, jpeg, png, gif, webp) are allowed." });
                 }
-                catch (DbUpdateConcurrencyException)
+
+                // Validate file size (max 1MB)
+                if (dto.IconFile.Length > 1048576) // 1MB
                 {
-                    if (!AmenityExists(amenity.AmenityID))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    return BadRequest(new { error = "File size exceeds the maximum allowed (1MB)." });
+                }
+
+                // Get the content type
+                amenity.IconContentType = dto.IconFile.ContentType;
+
+                // Process and save the image as binary data
+                amenity.Icon = await ProcessImageAsync(dto.IconFile);
+            }
+
+            // Update other amenity properties
+            amenity.Name = dto.Name;
+            amenity.Category = dto.Category;
+
+            try
+            {
+                _context.Entry(amenity).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+
+                // Log the action
+                await LogAdminAction("Updated amenity: " + amenity.Name);
+
+                // Get usage count for the response
+                int usageCount = await _context.ApartmentAmenities
+                    .CountAsync(aa => aa.AmenityID == amenity.AmenityID);
+
+                var resultDto = new AmenityDto
+                {
+                    AmenityID = amenity.AmenityID,
+                    Name = amenity.Name,
+                    IconBase64 = amenity.Icon != null ? Convert.ToBase64String(amenity.Icon) : null,
+                    IconContentType = amenity.IconContentType,
+                    Category = amenity.Category,
+                    UsageCount = usageCount
+                };
+
+                return Ok(resultDto);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!AmenityExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
                 }
             }
-            return BadRequest(ModelState);
+        }
+
+        private async Task<byte[]> ProcessImageAsync(IFormFile imageFile)
+        {
+            // Create a memory stream to hold the resized image data
+            using (var outputStream = new MemoryStream())
+            {
+                // Load the image using ImageSharp
+                using (var inputStream = imageFile.OpenReadStream())
+                using (var image = SixLabors.ImageSharp.Image.Load(inputStream))
+                {
+                    // Define the size we want for our amenity icons (48x48 is a good size for icons)
+                    var size = new SixLabors.ImageSharp.Size(48, 48);
+
+                    // Resize the image while preserving aspect ratio
+                    image.Mutate(x => x.Resize(new SixLabors.ImageSharp.Processing.ResizeOptions
+                    {
+                        Size = size,
+                        Mode = SixLabors.ImageSharp.Processing.ResizeMode.Max
+                    }));
+
+                    // Save the optimized image to our output stream as PNG
+                    await image.SaveAsPngAsync(outputStream);
+                }
+
+                // Return the binary data
+                return outputStream.ToArray();
+            }
         }
 
         // DELETE: api/Admin/Amenities/{id}
@@ -182,6 +343,15 @@ namespace ChabbyNb_API.Controllers
                 return NotFound();
             }
 
+            // Check if this amenity is in use
+            bool isInUse = await _context.ApartmentAmenities.AnyAsync(aa => aa.AmenityID == id);
+
+            if (isInUse)
+            {
+                return BadRequest(new { error = "This amenity is in use by one or more apartments and cannot be deleted." });
+            }
+
+            // Delete the amenity from the database
             _context.Amenities.Remove(amenity);
             await _context.SaveChangesAsync();
 
@@ -191,23 +361,9 @@ namespace ChabbyNb_API.Controllers
             return NoContent();
         }
 
-        // PATCH: api/Admin/VerifyApartment/{id}
-        [HttpPatch("VerifyApartment/{id}")]
-        public async Task<IActionResult> VerifyApartment(int id)
+        private bool AmenityExists(int id)
         {
-            var apartment = await _context.Apartments.FindAsync(id);
-            if (apartment == null)
-            {
-                return NotFound();
-            }
-
-            apartment.IsActive = true;
-            await _context.SaveChangesAsync();
-
-            // Log the action
-            await LogAdminAction("Verified apartment: " + apartment.Title);
-
-            return Ok(apartment);
+            return _context.Amenities.Any(e => e.AmenityID == id);
         }
 
         // POST: api/Admin/SendMessage
@@ -252,9 +408,5 @@ namespace ChabbyNb_API.Controllers
             await _context.SaveChangesAsync();
         }
 
-        private bool AmenityExists(int id)
-        {
-            return _context.Amenities.Any(e => e.AmenityID == id);
-        }
     }
 }

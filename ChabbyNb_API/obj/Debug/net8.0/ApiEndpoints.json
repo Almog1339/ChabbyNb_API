@@ -153,13 +153,23 @@
   },
   {
     "ContainingType": "ChabbyNb_API.Controllers.AdminController",
-    "Method": "Amenities",
+    "Method": "GetAmenities",
     "RelativePath": "api/Admin/Amenities",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
     "Parameters": [],
-    "ReturnTypes": []
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb_API.Models.DTOs.AmenityDto, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
   },
   {
     "ContainingType": "ChabbyNb_API.Controllers.AdminController",
@@ -170,12 +180,32 @@
     "Order": 0,
     "Parameters": [
       {
-        "Name": "amenity",
-        "Type": "ChabbyNb_API.Models.Amenity",
-        "IsRequired": true
+        "Name": "Name",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "IconFile",
+        "Type": "Microsoft.AspNetCore.Http.IFormFile",
+        "IsRequired": false
+      },
+      {
+        "Name": "Category",
+        "Type": "System.String",
+        "IsRequired": false
       }
     ],
-    "ReturnTypes": []
+    "ReturnTypes": [
+      {
+        "Type": "ChabbyNb_API.Models.DTOs.AmenityDto",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
   },
   {
     "ContainingType": "ChabbyNb_API.Controllers.AdminController",
@@ -191,7 +221,17 @@
         "IsRequired": true
       }
     ],
-    "ReturnTypes": []
+    "ReturnTypes": [
+      {
+        "Type": "ChabbyNb_API.Models.DTOs.AmenityDto",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
   },
   {
     "ContainingType": "ChabbyNb_API.Controllers.AdminController",
@@ -207,12 +247,37 @@
         "IsRequired": true
       },
       {
-        "Name": "amenity",
-        "Type": "ChabbyNb_API.Models.Amenity",
-        "IsRequired": true
+        "Name": "AmenityID",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "Name",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "IconFile",
+        "Type": "Microsoft.AspNetCore.Http.IFormFile",
+        "IsRequired": false
+      },
+      {
+        "Name": "Category",
+        "Type": "System.String",
+        "IsRequired": false
       }
     ],
-    "ReturnTypes": []
+    "ReturnTypes": [
+      {
+        "Type": "ChabbyNb_API.Models.DTOs.AmenityDto",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
   },
   {
     "ContainingType": "ChabbyNb_API.Controllers.AdminController",
@@ -292,10 +357,30 @@
     "ReturnTypes": []
   },
   {
-    "ContainingType": "ChabbyNb_API.Controllers.AdminController",
-    "Method": "VerifyApartment",
-    "RelativePath": "api/Admin/VerifyApartment/{id}",
-    "HttpMethod": "PATCH",
+    "ContainingType": "ChabbyNb_API.Controllers.AmenitiesController",
+    "Method": "GetAmenities",
+    "RelativePath": "api/Amenities",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb_API.Models.DTOs.AmenityDto, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.AmenitiesController",
+    "Method": "GetAmenity",
+    "RelativePath": "api/Amenities/{id}",
+    "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
     "Parameters": [
@@ -305,7 +390,141 @@
         "IsRequired": true
       }
     ],
-    "ReturnTypes": []
+    "ReturnTypes": [
+      {
+        "Type": "ChabbyNb_API.Models.DTOs.AmenityDto",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.AmenitiesController",
+    "Method": "GetCategories",
+    "RelativePath": "api/Amenities/Categories",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.AmenitiesController",
+    "Method": "GetAmenitiesByCategory",
+    "RelativePath": "api/Amenities/Category/{category}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "category",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb_API.Models.DTOs.AmenityDto, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.AmenitiesController",
+    "Method": "GetAmenitiesForApartment",
+    "RelativePath": "api/Amenities/ForApartment/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb_API.Models.DTOs.AmenityDto, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.AmenitiesController",
+    "Method": "GetPopularAmenities",
+    "RelativePath": "api/Amenities/Popular",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "count",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb_API.Models.DTOs.AmenityDto, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.AmenitiesController",
+    "Method": "SearchAmenities",
+    "RelativePath": "api/Amenities/Search",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "query",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb_API.Models.DTOs.AmenityDto, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
   },
   {
     "ContainingType": "ChabbyNb_API.Controllers.ApartmentsController",
