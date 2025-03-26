@@ -19,6 +19,7 @@ namespace ChabbyNb_API.Data
         public DbSet<Review> Reviews { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<EmailVerification> EmailVerifications { get; set; }
+        public DbSet<Tempwd> Tempwds { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -87,6 +88,15 @@ namespace ChabbyNb_API.Data
                 .HasOne(aa => aa.Amenity)
                 .WithMany(a => a.ApartmentAmenities)
                 .HasForeignKey(aa => aa.AmenityID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+
+            // Inside OnModelCreating method, add these configurations:
+            modelBuilder.Entity<Tempwd>()
+                .HasOne(t => t.User)
+                .WithMany()
+                .HasForeignKey(t => t.UserID)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

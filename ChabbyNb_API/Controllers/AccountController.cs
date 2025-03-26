@@ -375,26 +375,169 @@ namespace ChabbyNb_API.Controllers
         [HttpPost("ForgotPassword")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto model)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
+                return BadRequest(ModelState);
+            }
 
-                if (user != null)
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
+
+            if (user != null)
+            {
+                // Generate a random token
+                string token = Guid.NewGuid().ToString("N").Substring(0, 20);
+
+                // Create a temporary password reset record
+                var tempwd = new Tempwd
                 {
-                    // In a real application, you would:
-                    // 1. Generate a password reset token
-                    // 2. Store it with an expiration time
-                    // 3. Send an email with a reset link
+                    UserID = user.UserID,
+                    Token = token,
+                    ExperationTime = DateTime.Now.AddHours(24), // Token valid for 24 hours
+                    IsUsed = false
+                };
 
-                    // For this demo, we'll just show a success message
+                _context.Tempwds.Add(tempwd);
+                await _context.SaveChangesAsync();
+
+                // Build reset password link
+                string resetLink = $"{Request.Scheme}://{Request.Host}/reset-password?token={token}&email={Uri.EscapeDataString(user.Email)}";
+
+                // Prepare email message
+                string subject = "Reset Your ChabbyNb Password";
+                string body = $@"
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background-color: #ff5a5f; padding: 20px; color: white; text-align: center; }}
+                    .content {{ padding: 20px; }}
+                    .button {{ display: inline-block; background-color: #ff5a5f; color: white; padding: 10px 20px; 
+                               text-decoration: none; border-radius: 5px; margin-top: 20px; }}
+                    .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #666; }}
+                </style>
+            </head>
+            <body>
+                <div class='container'>
+                    <div class='header'>
+                        <h1>ChabbyNb Password Reset</h1>
+                    </div>
+                    <div class='content'>
+                        <p>Hello {user.FirstName ?? user.Username},</p>
+                        <p>We received a request to reset your password. To complete the process, please click the button below:</p>
+                        <p style='text-align: center;'>
+                            <a href='{resetLink}' class='button'>Reset Password</a>
+                        </p>
+                        <p>This link will expire in 24 hours.</p>
+                        <p>If you did not request a password reset, you can safely ignore this email.</p>
+                        <p>Best regards,<br>The ChabbyNb Team</p>
+                    </div>
+                    <div class='footer'>
+                        <p>© 2025 ChabbyNb. All rights reserved.</p>
+                        <p>25 Adrianou St, Athens, Greece</p>
+                    </div>
+                </div>
+            </body>
+            </html>";
+
+                // Get SMTP settings from configuration
+                var smtpSettings = _configuration.GetSection("SmtpSettings");
+
+                // Check if we should send real emails
+                if (!_configuration.GetValue<bool>("SendRealEmails", false))
+                {
+                    // For development, just log the email
+                    Console.WriteLine($"Password reset email would be sent to: {user.Email}");
+                    Console.WriteLine($"Subject: {subject}");
+                    Console.WriteLine($"Reset Link: {resetLink}");
                     return Ok(new { success = true, message = "If your email is registered in our system, you will receive password reset instructions shortly." });
                 }
 
-                // Don't reveal that the user does not exist
-                return Ok(new { success = true, message = "If your email is registered in our system, you will receive password reset instructions shortly." });
+                try
+                {
+                    // Configure and send email
+                    using (var client = new SmtpClient())
+                    {
+                        // Set up the SMTP client
+                        client.Host = smtpSettings["Host"];
+                        client.Port = int.Parse(smtpSettings["Port"] ?? "587");
+                        client.EnableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
+                        client.DeliveryMethod = SmtpDeliveryMethod.Network;
+                        client.UseDefaultCredentials = false;
+
+                        // Make sure credentials are correctly set
+                        string username = smtpSettings["Username"];
+                        string password = smtpSettings["Password"];
+
+                        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+                        {
+                            throw new InvalidOperationException("SMTP username or password is not configured.");
+                        }
+
+                        client.Credentials = new NetworkCredential(username, password);
+
+                        // Create the email message
+                        using (var message = new MailMessage())
+                        {
+                            message.From = new MailAddress(smtpSettings["FromEmail"], "ChabbyNb");
+                            message.Subject = subject;
+                            message.Body = body;
+                            message.IsBodyHtml = true;
+                            message.To.Add(new MailAddress(user.Email));
+
+                            await client.SendMailAsync(message);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log the exception but don't reveal it to the user
+                    Console.Error.WriteLine("Error sending password reset email: " + ex.Message);
+                }
             }
 
-            return BadRequest(ModelState);
+            // Don't reveal that the user does not exist
+            return Ok(new { success = true, message = "If your email is registered in our system, you will receive password reset instructions shortly." });
+        }
+
+        // POST: api/Account/ResetPassword
+        [HttpPost("ResetPassword")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // Find the user by email
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
+            if (user == null)
+            {
+                // Don't reveal that the user does not exist
+                return BadRequest(new { error = "Invalid or expired password reset token." });
+            }
+
+            // Find the reset token
+            var tempwd = await _context.Tempwds.FirstOrDefaultAsync(t =>
+                t.Token == model.Token &&
+                t.UserID == user.UserID &&
+                !t.IsUsed &&
+                t.ExperationTime > DateTime.Now);
+
+            if (tempwd == null)
+            {
+                return BadRequest(new { error = "Invalid or expired password reset token." });
+            }
+
+            // Reset the password
+            user.PasswordHash = HashPassword(model.Password);
+
+            // Mark the token as used
+            tempwd.IsUsed = true;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Your password has been reset successfully. You can now log in with your new password." });
         }
 
         // POST: api/Account/ChangePassword

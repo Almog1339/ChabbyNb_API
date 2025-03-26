@@ -305,3 +305,4 @@ C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\ref\ChabbyNb_API.dll
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net8.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net8.0\SixLabors.ImageSharp.dll
+C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net8.0\ChabbyNb_API.staticwebassets.runtime.json

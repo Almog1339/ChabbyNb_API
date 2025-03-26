@@ -137,6 +137,22 @@
   },
   {
     "ContainingType": "ChabbyNb_API.Controllers.AccountController",
+    "Method": "ResetPassword",
+    "RelativePath": "api/Account/ResetPassword",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "model",
+        "Type": "ChabbyNb_API.Models.DTOs.ResetPasswordDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.AccountController",
     "Method": "VerifyEmail",
     "RelativePath": "api/Account/VerifyEmail/{token}",
     "HttpMethod": "GET",
