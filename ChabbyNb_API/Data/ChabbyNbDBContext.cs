@@ -27,6 +27,14 @@ namespace ChabbyNb_API.Data
 
             // Configure Decimal properties with precision
             modelBuilder.Entity<Apartment>()
+                .Property(a => a.PricePerNight)
+                .HasColumnType("decimal(10, 2)");
+
+            modelBuilder.Entity<Apartment>()
+                .Property(a => a.PetFee)
+                .HasColumnType("decimal(10, 2)");
+
+            modelBuilder.Entity<Apartment>()
                 .Property(a => a.Latitude)
                 .HasPrecision(9, 6);
 
@@ -34,9 +42,11 @@ namespace ChabbyNb_API.Data
                 .Property(a => a.Longitude)
                 .HasPrecision(9, 6);
 
-            modelBuilder.Entity<Apartment>()
-                .Property(a => a.PetFee)
-                .HasPrecision(10, 2);
+            // Also configure the decimal property in the Booking entity
+            modelBuilder.Entity<Booking>()
+                .Property(b => b.TotalPrice)
+                .HasColumnType("decimal(10, 2)");
+
 
             // Configure Review relationships with NO CASCADE DELETE
             modelBuilder.Entity<Review>()
@@ -90,9 +100,7 @@ namespace ChabbyNb_API.Data
                 .HasForeignKey(aa => aa.AmenityID)
                 .OnDelete(DeleteBehavior.Restrict);
 
-
-
-            // Inside OnModelCreating method, add these configurations:
+            // Inside ChabbyNbDbContext.OnModelCreating method
             modelBuilder.Entity<Tempwd>()
                 .HasOne(t => t.User)
                 .WithMany()

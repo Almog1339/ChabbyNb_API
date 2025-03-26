@@ -65,6 +65,25 @@ namespace ChabbyNb_API.Models.DTOs
         public string Email { get; set; }
     }
 
+    public class ResetPasswordDto
+    {
+        [Required]
+        public string Token { get; set; }
+
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; }
+
+        [Required]
+        [StringLength(100, ErrorMessage = "The {0} must be at least {2} characters long.", MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        public string Password { get; set; }
+
+        [DataType(DataType.Password)]
+        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        public string ConfirmPassword { get; set; }
+    }
+
     public class ChangePasswordDto
     {
         [Required(ErrorMessage = "Current password is required")]
@@ -100,25 +119,6 @@ namespace ChabbyNb_API.Models.DTOs
         [StringLength(20, ErrorMessage = "Phone number cannot be longer than 20 characters")]
         [RegularExpression(@"^[0-9\+\-\(\) ]+$", ErrorMessage = "Invalid phone number format")]
         public string PhoneNumber { get; set; }
-    }
-
-    public class ResetPasswordDto
-    {
-        [Required]
-        public string Token { get; set; }
-
-        [Required]
-        [EmailAddress]
-        public string Email { get; set; }
-
-        [Required]
-        [StringLength(100, ErrorMessage = "The {0} must be at least {2} characters long.", MinimumLength = 6)]
-        [DataType(DataType.Password)]
-        public string Password { get; set; }
-
-        [DataType(DataType.Password)]
-        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
-        public string ConfirmPassword { get; set; }
     }
 
     public class LoginResultDto
