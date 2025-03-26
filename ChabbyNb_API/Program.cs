@@ -53,7 +53,12 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-
+// Ensure WebRootPath is set
+if (string.IsNullOrEmpty(builder.Environment.WebRootPath))
+{
+    builder.Environment.WebRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+    Directory.CreateDirectory(builder.Environment.WebRootPath);
+}
 // Add database context
 builder.Services.AddDbContext<ChabbyNbDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));

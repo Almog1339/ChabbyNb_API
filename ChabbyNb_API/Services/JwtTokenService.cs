@@ -24,7 +24,7 @@ namespace ChabbyNb_API.Services
             var jwtKey = _configuration["Jwt:Key"];
             var jwtIssuer = _configuration["Jwt:Issuer"];
             var jwtAudience = _configuration["Jwt:Audience"];
-            var jwtExpiryMinutes = _configuration.GetValue<int>("Jwt:ExpiryInMinutes", 180); // Default to 3 hours
+            var jwtExpiryMinutes = user.IsAdmin ? _configuration.GetValue<int>("Jwt:ExpiryInMinutes", 14400) : _configuration.GetValue<int>("Jwt:ExpiryInMinutes", 180); // Default to 3 hours
 
             if (string.IsNullOrEmpty(jwtKey) || string.IsNullOrEmpty(jwtIssuer) || string.IsNullOrEmpty(jwtAudience))
             {
