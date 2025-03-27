@@ -20,6 +20,8 @@ namespace ChabbyNb_API.Data
         public DbSet<User> Users { get; set; }
         public DbSet<EmailVerification> EmailVerifications { get; set; }
         public DbSet<Tempwd> Tempwds { get; set; }
+        public DbSet<Payment> Payments { get; set; }
+        public DbSet<Refund> Refunds { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

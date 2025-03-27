@@ -5,6 +5,7 @@ using System.Text;
 using ChabbyNb_API.Data;
 using System.Text.Json.Serialization;
 using Microsoft.OpenApi.Models;
+using ChabbyNb_API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -65,6 +66,7 @@ builder.Services.AddDbContext<ChabbyNbDbContext>(options =>
 
 // Add session services (we'll keep these for backward compatibility during transition)
 builder.Services.AddDistributedMemoryCache();
+builder.Services.AddScoped<IPaymentService, StripePaymentService>();
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);

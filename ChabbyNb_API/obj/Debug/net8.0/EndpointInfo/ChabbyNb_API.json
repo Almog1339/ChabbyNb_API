@@ -2195,6 +2195,341 @@
         }
       }
     },
+    "/api/Finance/Dashboard": {
+      "get": {
+        "tags": [
+          "Finance"
+        ],
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialOverviewDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialOverviewDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialOverviewDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Finance/Payments": {
+      "get": {
+        "tags": [
+          "Finance"
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fromDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "toDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PaymentListItemDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PaymentListItemDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PaymentListItemDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Finance/Payments/{id}": {
+      "get": {
+        "tags": [
+          "Finance"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentDetailsDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentDetailsDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Finance/Refunds": {
+      "post": {
+        "tags": [
+          "Finance"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessRefundDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessRefundDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessRefundDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Finance"
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fromDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "toDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RefundDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RefundDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RefundDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Finance/ManualCharge": {
+      "post": {
+        "tags": [
+          "Finance"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualChargeDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualChargeDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualChargeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentListItemDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentListItemDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentListItemDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Home": {
       "get": {
         "tags": [
@@ -2637,6 +2972,18 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Webhooks/Stripe": {
+      "post": {
+        "tags": [
+          "Webhooks"
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -3165,6 +3512,51 @@
         },
         "additionalProperties": false
       },
+      "FinancialOverviewDto": {
+        "type": "object",
+        "properties": {
+          "totalRevenue": {
+            "type": "number",
+            "format": "double"
+          },
+          "pendingRevenue": {
+            "type": "number",
+            "format": "double"
+          },
+          "refundedAmount": {
+            "type": "number",
+            "format": "double"
+          },
+          "totalTransactions": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pendingTransactions": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completedTransactions": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failedTransactions": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "refundedTransactions": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "monthlyRevenue": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MonthlyRevenueDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "ForgotPasswordDto": {
         "required": [
           "email"
@@ -3269,6 +3661,222 @@
         },
         "additionalProperties": false
       },
+      "ManualChargeDto": {
+        "required": [
+          "amount",
+          "bookingID",
+          "description",
+          "paymentMethodID"
+        ],
+        "type": "object",
+        "properties": {
+          "bookingID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "amount": {
+            "minimum": 0.01,
+            "type": "number",
+            "format": "double"
+          },
+          "description": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "paymentMethodID": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MonthlyRevenueDto": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string",
+            "nullable": true
+          },
+          "revenue": {
+            "type": "number",
+            "format": "double"
+          },
+          "refundedAmount": {
+            "type": "number",
+            "format": "double"
+          },
+          "transactions": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PaymentDetailsDto": {
+        "type": "object",
+        "properties": {
+          "paymentID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bookingID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reservationNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "guestName": {
+            "type": "string",
+            "nullable": true
+          },
+          "apartmentTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "checkInDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "checkOutDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "currency": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "paymentMethod": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isRefundable": {
+            "type": "boolean"
+          },
+          "paymentIntentID": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastFour": {
+            "type": "string",
+            "nullable": true
+          },
+          "cardBrand": {
+            "type": "string",
+            "nullable": true
+          },
+          "completedDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "refunds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RefundDto"
+            },
+            "nullable": true
+          },
+          "refundableAmount": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PaymentListItemDto": {
+        "type": "object",
+        "properties": {
+          "paymentID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bookingID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reservationNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "guestName": {
+            "type": "string",
+            "nullable": true
+          },
+          "apartmentTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "checkInDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "checkOutDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "currency": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "paymentMethod": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isRefundable": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProcessRefundDto": {
+        "required": [
+          "amount",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "paymentID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "amount": {
+            "minimum": 0.01,
+            "type": "number",
+            "format": "double"
+          },
+          "reason": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "ProfileDto": {
         "required": [
           "username"
@@ -3302,6 +3910,45 @@
             "minLength": 0,
             "pattern": "^[0-9\\+\\-\\(\\) ]+$",
             "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "RefundDto": {
+        "type": "object",
+        "properties": {
+          "refundID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "refundIntentID": {
+            "type": "string",
+            "nullable": true
+          },
+          "amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "adminName": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedDate": {
+            "type": "string",
+            "format": "date-time",
             "nullable": true
           }
         },
