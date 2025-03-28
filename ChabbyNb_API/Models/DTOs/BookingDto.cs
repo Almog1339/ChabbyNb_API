@@ -25,6 +25,10 @@ namespace ChabbyNb_API.Models.DTOs
 
         [StringLength(500, ErrorMessage = "Special requests cannot be longer than 500 characters")]
         public string SpecialRequests { get; set; }
+
+        // Added for promotions
+        [StringLength(20)]
+        public string PromotionCode { get; set; }
     }
 
     public class BookingResponseDto
@@ -37,7 +41,10 @@ namespace ChabbyNb_API.Models.DTOs
         public DateTime CheckOutDate { get; set; }
         public int GuestCount { get; set; }
         public int PetCount { get; set; }
+        public decimal BasePrice { get; set; }
+        public decimal DiscountAmount { get; set; }
         public decimal TotalPrice { get; set; }
+        public string PromotionCode { get; set; }
         public string BookingStatus { get; set; }
         public string PaymentStatus { get; set; }
         public string ReservationNumber { get; set; }
@@ -59,7 +66,10 @@ namespace ChabbyNb_API.Models.DTOs
         public DateTime CheckOutDate { get; set; }
         public int GuestCount { get; set; }
         public int PetCount { get; set; }
+        public decimal BasePrice { get; set; }
+        public decimal DiscountAmount { get; set; }
         public decimal TotalPrice { get; set; }
+        public string PromotionCode { get; set; }
         public string BookingStatus { get; set; }
         public string PaymentStatus { get; set; }
         public string ReservationNumber { get; set; }
@@ -82,6 +92,8 @@ namespace ChabbyNb_API.Models.DTOs
         public int BookingID { get; set; }
         public DateTime CheckInDate { get; set; }
         public DateTime CheckOutDate { get; set; }
+        public decimal BasePrice { get; set; }
+        public decimal DiscountAmount { get; set; }
         public decimal TotalPrice { get; set; }
         public decimal RefundAmount { get; set; }
         public string CancellationPolicy { get; set; }

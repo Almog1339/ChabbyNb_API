@@ -7,9 +7,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
-using ChabbyNb_API.Data;
-using ChabbyNb_API.Models;
-using ChabbyNb_API.Models.DTOs;
+using ChabbyNb_API.Data;  // The namespace containing your DbContext
+using ChabbyNb_API.Models;  // The namespace containing your model classes
+using ChabbyNb_API.Models.DTOs;  // The namespace containing your DTOs
+using ChabbyNb_API.Services;  // The namespace containing your services
+
 
 namespace ChabbyNb_API.Controllers
 {
@@ -19,10 +21,12 @@ namespace ChabbyNb_API.Controllers
     public class BookingsController : ControllerBase
     {
         private readonly ChabbyNbDbContext _context;
+        private readonly PriceCalculationService _priceService;
 
         public BookingsController(ChabbyNbDbContext context)
         {
             _context = context;
+            _priceService = new PriceCalculationService(context);
         }
 
         // GET: api/Bookings
@@ -51,6 +55,7 @@ namespace ChabbyNb_API.Controllers
                 .Include(b => b.Apartment)
                     .ThenInclude(a => a.ApartmentImages)
                 .Include(b => b.Reviews)
+                .Include(b => b.Promotion)
                 .FirstOrDefaultAsync(b => b.BookingID == id && b.UserID == userId);
 
             if (booking == null)
@@ -152,35 +157,111 @@ namespace ChabbyNb_API.Controllers
                 return BadRequest(new { error = "This apartment does not allow pets" });
             }
 
-            // Calculate total price
-            decimal totalPrice = CalculateTotalPrice(
-                apartment.PricePerNight,
-                bookingDto.CheckInDate,
-                bookingDto.CheckOutDate,
-                bookingDto.PetCount,
-                apartment.PetFee);
-
-            // Create booking
-            var booking = new Booking
+            // Calculate total price using our pricing service
+            try
             {
-                UserID = userId,
-                ApartmentID = bookingDto.ApartmentID,
-                CheckInDate = bookingDto.CheckInDate,
-                CheckOutDate = bookingDto.CheckOutDate,
-                GuestCount = bookingDto.GuestCount,
-                PetCount = bookingDto.PetCount,
-                TotalPrice = totalPrice,
-                BookingStatus = "Pending",
-                PaymentStatus = "Pending",
-                SpecialRequests = bookingDto.SpecialRequests,
-                ReservationNumber = GenerateReservationNumber(),
-                CreatedDate = DateTime.Now
-            };
+                var priceResult = await _priceService.CalculateBookingPriceAsync(
+                    bookingDto.ApartmentID,
+                    bookingDto.CheckInDate,
+                    bookingDto.CheckOutDate,
+                    bookingDto.PetCount,
+                    bookingDto.PromotionCode);
 
-            _context.Bookings.Add(booking);
-            await _context.SaveChangesAsync();
+                // Create booking
+                var booking = new Booking
+                {
+                    UserID = userId,
+                    ApartmentID = bookingDto.ApartmentID,
+                    CheckInDate = bookingDto.CheckInDate,
+                    CheckOutDate = bookingDto.CheckOutDate,
+                    GuestCount = bookingDto.GuestCount,
+                    PetCount = bookingDto.PetCount,
+                    BasePrice = priceResult.BasePrice,
+                    DiscountAmount = priceResult.DiscountAmount,
+                    TotalPrice = priceResult.TotalPrice,
+                    PromotionID = priceResult.PromotionId,
+                    PromotionCode = priceResult.PromotionCode,
+                    BookingStatus = "Pending",
+                    PaymentStatus = "Pending",
+                    SpecialRequests = bookingDto.SpecialRequests,
+                    ReservationNumber = GenerateReservationNumber(),
+                    CreatedDate = DateTime.Now
+                };
 
-            return CreatedAtAction(nameof(GetBooking), new { id = booking.BookingID }, booking);
+                _context.Bookings.Add(booking);
+                await _context.SaveChangesAsync();
+
+                // Increment usage count for the promotion
+                if (priceResult.PromotionId.HasValue)
+                {
+                    var promotion = await _context.Promotions.FindAsync(priceResult.PromotionId.Value);
+                    if (promotion != null)
+                    {
+                        promotion.UsageCount++;
+                        await _context.SaveChangesAsync();
+                    }
+                }
+
+                return CreatedAtAction(nameof(GetBooking), new { id = booking.BookingID }, booking);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = $"Error calculating booking price: {ex.Message}" });
+            }
+        }
+
+        // GET: api/Bookings/CalculatePrice
+        [HttpGet("CalculatePrice")]
+        public async Task<ActionResult<BookingPriceResult>> CalculatePrice(
+            [FromQuery] int apartmentId,
+            [FromQuery] DateTime checkInDate,
+            [FromQuery] DateTime checkOutDate,
+            [FromQuery] int petCount = 0,
+            [FromQuery] string promotionCode = null)
+        {
+            try
+            {
+                // Validate apartment exists
+                var apartment = await _context.Apartments.FindAsync(apartmentId);
+                if (apartment == null || !apartment.IsActive)
+                {
+                    return NotFound("Apartment not found or not available");
+                }
+
+                // Validate dates
+                if (checkInDate < DateTime.Today)
+                {
+                    return BadRequest("Check-in date cannot be in the past");
+                }
+
+                if (checkOutDate <= checkInDate)
+                {
+                    return BadRequest("Check-out date must be after check-in date");
+                }
+
+                // Check if apartment is available for these dates
+                bool isAvailable = await IsApartmentAvailable(apartmentId, checkInDate, checkOutDate);
+                if (!isAvailable)
+                {
+                    return BadRequest("Apartment is not available for the selected dates");
+                }
+
+                // Check pet policy
+                if (petCount > 0 && !apartment.PetFriendly)
+                {
+                    return BadRequest("This apartment does not allow pets");
+                }
+
+                // Calculate price
+                var priceResult = await _priceService.CalculateBookingPriceAsync(
+                    apartmentId, checkInDate, checkOutDate, petCount, promotionCode);
+
+                return Ok(priceResult);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error calculating price: {ex.Message}");
+            }
         }
 
         // PATCH: api/Bookings/5/Cancel
@@ -239,16 +320,6 @@ namespace ChabbyNb_API.Controllers
                 .AnyAsync();
 
             return !overlappingBookings;
-        }
-
-        // Helper method to calculate total price
-        private decimal CalculateTotalPrice(decimal pricePerNight, DateTime checkIn, DateTime checkOut, int petCount, decimal? petFee)
-        {
-            int nights = (int)(checkOut - checkIn).TotalDays;
-            decimal basePrice = pricePerNight * nights;
-            decimal petCost = petCount > 0 && petFee.HasValue ? petFee.Value * petCount : 0;
-
-            return basePrice + petCost;
         }
 
         // Helper method to generate a unique reservation number

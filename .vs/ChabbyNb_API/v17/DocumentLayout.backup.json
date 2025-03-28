@@ -3,36 +3,16 @@
   "WorkspaceRootPath": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Migrations\\20250327200110_AddPaymentSystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:ChabbyNb_API\\Migrations\\20250327200110_AddPaymentSystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
       "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\services\\stripepaymentservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\services\\stripepaymentservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\controllers\\seasonalpricingcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\controllers\\seasonalpricingcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\data\\chabbynbdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\data\\chabbynbdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\controllers\\webhookscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\controllers\\webhookscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\controllers\\financecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\controllers\\financecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\models\\dtos\\financedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\models\\dtos\\financedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\models\\dtos\\seasonalpricingdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\models\\dtos\\seasonalpricingdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -47,106 +27,40 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "20250327200110_AddPaymentSystem.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Migrations\\20250327200110_AddPaymentSystem.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Migrations\\20250327200110_AddPaymentSystem.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Migrations\\20250327200110_AddPaymentSystem.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Migrations\\20250327200110_AddPaymentSystem.cs",
-              "ViewState": "AgIAAFoAAAAAAAAAAAA5wAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-27T20:01:10.858Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
               "Title": "appsettings.json",
               "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\appsettings.json",
               "RelativeDocumentMoniker": "ChabbyNb_API\\appsettings.json",
               "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\appsettings.json",
               "RelativeToolTip": "ChabbyNb_API\\appsettings.json",
-              "ViewState": "AgIAAAwAAAAAAAAAAADwvyAAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABsAAABLAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-03-27T19:48:34.126Z",
+              "WhenOpened": "2025-03-28T12:22:33.098Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "ChabbyNbDBContext.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Data\\ChabbyNbDBContext.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Data\\ChabbyNbDBContext.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Data\\ChabbyNbDBContext.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Data\\ChabbyNbDBContext.cs",
-              "ViewState": "AgIAABMAAAAAAAAAAAAxwBcAAAAyAAAAAAAAAA==",
+              "DocumentIndex": 1,
+              "Title": "SeasonalPricingController.cs",
+              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\SeasonalPricingController.cs",
+              "RelativeDocumentMoniker": "ChabbyNb_API\\Controllers\\SeasonalPricingController.cs",
+              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\SeasonalPricingController.cs",
+              "RelativeToolTip": "ChabbyNb_API\\Controllers\\SeasonalPricingController.cs",
+              "ViewState": "AgIAALsAAAAAAAAAAAAiwNMAAAA/AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-27T18:58:12.412Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Program.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Program.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Program.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Program.cs",
-              "ViewState": "AgIAADcAAAAAAAAAAAAAAEQAAAA8AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-27T18:57:32.75Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "WebhooksController.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\WebhooksController.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Controllers\\WebhooksController.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\WebhooksController.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Controllers\\WebhooksController.cs",
-              "ViewState": "AgIAABQAAAAAAAAAAAAcwDAAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-27T18:57:00.726Z",
+              "WhenOpened": "2025-03-28T11:14:55.479Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 2,
-              "Title": "StripePaymentService.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Services\\StripePaymentService.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Services\\StripePaymentService.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Services\\StripePaymentService.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Services\\StripePaymentService.cs",
-              "ViewState": "AgIAAFADAAAAAAAAAAAswHADAAAJAAAAAAAAAA==",
+              "Title": "SeasonalPricingDto.cs",
+              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\DTOs\\SeasonalPricingDto.cs",
+              "RelativeDocumentMoniker": "ChabbyNb_API\\Models\\DTOs\\SeasonalPricingDto.cs",
+              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\DTOs\\SeasonalPricingDto.cs",
+              "RelativeToolTip": "ChabbyNb_API\\Models\\DTOs\\SeasonalPricingDto.cs",
+              "ViewState": "AgIAACwAAAAAAAAAAAAQwF0AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-27T18:56:27.082Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "FinanceController.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\FinanceController.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Controllers\\FinanceController.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\FinanceController.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Controllers\\FinanceController.cs",
-              "ViewState": "AgIAABgAAAAAAAAAAAAgwCYAAAAqAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-27T18:53:05.543Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "FinanceDto.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\DTOs\\FinanceDto.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Models\\DTOs\\FinanceDto.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\DTOs\\FinanceDto.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Models\\DTOs\\FinanceDto.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAF0AAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-27T18:51:35.151Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-03-28T11:14:32.33Z"
             }
           ]
         }

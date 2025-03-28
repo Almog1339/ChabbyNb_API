@@ -1215,6 +1215,52 @@
   },
   {
     "ContainingType": "ChabbyNb_API.Controllers.BookingsController",
+    "Method": "CalculatePrice",
+    "RelativePath": "api/Bookings/CalculatePrice",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "apartmentId",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "checkInDate",
+        "Type": "System.DateTime",
+        "IsRequired": false
+      },
+      {
+        "Name": "checkOutDate",
+        "Type": "System.DateTime",
+        "IsRequired": false
+      },
+      {
+        "Name": "petCount",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "promotionCode",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "ChabbyNb_API.Services.BookingPriceResult",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.BookingsController",
     "Method": "GetPastBookings",
     "RelativePath": "api/Bookings/Past",
     "HttpMethod": "GET",
@@ -1748,6 +1794,213 @@
       }
     ],
     "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.PromotionsController",
+    "Method": "GetAllPromotions",
+    "RelativePath": "api/Promotions",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb_API.Models.DTOs.PromotionDto, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.PromotionsController",
+    "Method": "CreatePromotion",
+    "RelativePath": "api/Promotions",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "ChabbyNb_API.Models.DTOs.CreatePromotionDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "ChabbyNb_API.Models.DTOs.PromotionDto",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.PromotionsController",
+    "Method": "GetPromotion",
+    "RelativePath": "api/Promotions/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "ChabbyNb_API.Models.DTOs.PromotionDto",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.SeasonalPricingController",
+    "Method": "GetAllSeasonalPricing",
+    "RelativePath": "api/SeasonalPricing",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb_API.Models.DTOs.SeasonalPricingDto, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.SeasonalPricingController",
+    "Method": "CreateSeasonalPricing",
+    "RelativePath": "api/SeasonalPricing",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "ChabbyNb_API.Models.DTOs.CreateSeasonalPricingDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "ChabbyNb_API.Models.DTOs.SeasonalPricingDto",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.SeasonalPricingController",
+    "Method": "GetSeasonalPricing",
+    "RelativePath": "api/SeasonalPricing/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "ChabbyNb_API.Models.DTOs.SeasonalPricingDto",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.SeasonalPricingController",
+    "Method": "UpdateSeasonalPricing",
+    "RelativePath": "api/SeasonalPricing/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "dto",
+        "Type": "ChabbyNb_API.Models.DTOs.UpdateSeasonalPricingDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.SeasonalPricingController",
+    "Method": "DeleteSeasonalPricing",
+    "RelativePath": "api/SeasonalPricing/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.SeasonalPricingController",
+    "Method": "GetSeasonalPricingForApartment",
+    "RelativePath": "api/SeasonalPricing/Apartment/{apartmentId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "apartmentId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb_API.Models.DTOs.SeasonalPricingDto, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
   },
   {
     "ContainingType": "ChabbyNb_API.Controllers.WebhooksController",

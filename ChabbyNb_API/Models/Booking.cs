@@ -34,6 +34,21 @@ namespace ChabbyNb_API.Models
         [Column(TypeName = "decimal(10, 2)")]
         public decimal TotalPrice { get; set; }
 
+        // Add to your existing Booking class
+        [Column(TypeName = "decimal(10, 2)")]
+        public decimal BasePrice { get; set; } // Standard price before discounts
+
+        public int? PromotionID { get; set; }
+
+        [Column(TypeName = "decimal(10, 2)")]
+        public decimal? DiscountAmount { get; set; }
+
+        [StringLength(20)]
+        public string PromotionCode { get; set; }
+
+        [ForeignKey("PromotionID")]
+        public virtual Promotion Promotion { get; set; }
+
         [Required]
         [StringLength(20)]
         public string BookingStatus { get; set; }

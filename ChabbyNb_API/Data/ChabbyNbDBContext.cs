@@ -22,6 +22,8 @@ namespace ChabbyNb_API.Data
         public DbSet<Tempwd> Tempwds { get; set; }
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Refund> Refunds { get; set; }
+        public DbSet<SeasonalPricing> SeasonalPricings { get; set; }
+        public DbSet<Promotion> Promotions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -49,6 +51,58 @@ namespace ChabbyNb_API.Data
                 .Property(b => b.TotalPrice)
                 .HasColumnType("decimal(10, 2)");
 
+            // Configure decimal properties in Booking
+            modelBuilder.Entity<Booking>()
+                .Property(b => b.BasePrice)
+                .HasColumnType("decimal(10, 2)");
+
+            modelBuilder.Entity<Booking>()
+                .Property(b => b.DiscountAmount)
+                .HasColumnType("decimal(10, 2)");
+
+            // Configure decimal properties in SeasonalPricing
+            modelBuilder.Entity<SeasonalPricing>()
+                .Property(sp => sp.PricePerNight)
+                .HasColumnType("decimal(10, 2)");
+
+            // Configure SeasonalPricing relationship
+            modelBuilder.Entity<SeasonalPricing>()
+                .HasOne(sp => sp.Apartment)
+                .WithMany()
+                .HasForeignKey(sp => sp.ApartmentID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Configure Promotion relationship
+            modelBuilder.Entity<Promotion>()
+                .HasOne(p => p.Apartment)
+                .WithMany()
+                .HasForeignKey(p => p.ApartmentID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Add these configurations for Promotion decimal properties
+            modelBuilder.Entity<Promotion>()
+                .Property(p => p.MinimumBookingAmount)
+                .HasColumnType("decimal(10, 2)");
+
+            modelBuilder.Entity<Promotion>()
+                .Property(p => p.MinimumStayNights)
+                .HasColumnType("decimal(10, 2)");
+
+            modelBuilder.Entity<Promotion>()
+                .Property(p => p.MaximumDiscountAmount)
+                .HasColumnType("decimal(10, 2)");
+
+            modelBuilder.Entity<Promotion>()
+                .Property(p => p.DiscountValue)
+                .HasColumnType("decimal(10, 2)");
+
+            // Configure relationship between Booking and Promotion
+            modelBuilder.Entity<Booking>()
+                .HasOne(b => b.Promotion)  // Use the navigation property instead of a generic reference
+                .WithMany(p => p.Bookings)
+                .HasForeignKey(b => b.PromotionID)  // Use the actual property name
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Configure Review relationships with NO CASCADE DELETE
             modelBuilder.Entity<Review>()
