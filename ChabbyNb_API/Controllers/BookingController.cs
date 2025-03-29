@@ -27,9 +27,8 @@ namespace ChabbyNb_API.Controllers
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
         private readonly ILogger<BookingsController> _logger;
-        private readonly BookingExpirationService _expirationService;
 
-        public BookingsController(ChabbyNbDbContext context, IPaymentService paymentService, IConfiguration configuration, IEmailService emailService, ILogger<BookingsController> logger, BookingExpirationService expirationService)
+        public BookingsController(ChabbyNbDbContext context, IPaymentService paymentService, IConfiguration configuration, IEmailService emailService, ILogger<BookingsController> logger)
         {
             _context = context;
             _priceService = new PriceCalculationService(context);
@@ -37,7 +36,6 @@ namespace ChabbyNb_API.Controllers
             _configuration = configuration;
             _emailService = emailService;
             _logger = logger;
-            _expirationService = expirationService;
         }
 
         // GET: api/Bookings

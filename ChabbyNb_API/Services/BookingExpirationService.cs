@@ -9,19 +9,23 @@ using Microsoft.EntityFrameworkCore;
 using ChabbyNb_API.Data;
 using ChabbyNb_API.Models;
 using ChabbyNb_API.Services;
+using Stripe;
 
 public class BookingExpirationService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<BookingExpirationService> _logger;
     private readonly TimeSpan _checkInterval = TimeSpan.FromMinutes(1);
+    private readonly IConfiguration _configuration;
 
     public BookingExpirationService(
         IServiceProvider serviceProvider,
-        ILogger<BookingExpirationService> logger)
+        ILogger<BookingExpirationService> logger,
+        IConfiguration configuration)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _configuration = configuration;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -65,6 +69,34 @@ public class BookingExpirationService : BackgroundService
             {
                 booking.BookingStatus = "Canceled";
                 booking.PaymentStatus = "Expired";
+
+                // Cancel the associated payment intent in Stripe
+                try
+                {
+                    var payment = await dbContext.Payments
+                        .FirstOrDefaultAsync(p => p.BookingID == booking.BookingID);
+
+                    if (payment != null && !string.IsNullOrEmpty(payment.PaymentIntentID))
+                    {
+                        // Initialize Stripe API
+                        StripeConfiguration.ApiKey = _configuration["Stripe:SecretKey"];
+                        var service = new PaymentIntentService();
+
+                        // Cancel the payment intent
+                        await service.CancelAsync(payment.PaymentIntentID, new PaymentIntentCancelOptions
+                        {
+                            CancellationReason = "abandoned"
+                        });
+
+                        // Update payment status in database
+                        payment.Status = "canceled";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Error canceling Stripe payment intent for booking {booking.BookingID}");
+                    // Continue with booking cancellation even if Stripe update fails
+                }
 
                 // Send notification email
                 try
