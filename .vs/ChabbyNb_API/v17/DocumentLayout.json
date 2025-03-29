@@ -3,23 +3,39 @@
   "WorkspaceRootPath": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\controllers\\memberscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\controllers\\memberscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\services\\bookingexpirationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\services\\bookingexpirationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\controllers\\bookingcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\controllers\\bookingcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\models\\dtos\\bookingdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\models\\dtos\\bookingdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\services\\stripepaymentservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\services\\stripepaymentservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\controllers\\webhookscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\controllers\\webhookscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\models\\payment.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\models\\payment.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\almog\\AppData\\Local\\SourceServer\\757220900007ef888409577b630a87e79d9b9b716811a00614eed65c7ba0c778\\ChabbyNb_API\\Services\\StripePaymentService.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\models\\dtos\\bookingdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\models\\dtos\\bookingdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\controllers\\webhookscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\controllers\\webhookscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\controllers\\financecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -33,11 +49,76 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 1,
           "Children": [
             {
               "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Program.cs",
+              "RelativeDocumentMoniker": "ChabbyNb_API\\Program.cs",
+              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Program.cs",
+              "RelativeToolTip": "ChabbyNb_API\\Program.cs",
+              "ViewState": "AgIAACwAAAAAAAAAAAAlwEIAAABEAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-03-29T17:50:40.885Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "MembersController.cs",
+              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\MembersController.cs",
+              "RelativeDocumentMoniker": "ChabbyNb_API\\Controllers\\MembersController.cs",
+              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\MembersController.cs",
+              "RelativeToolTip": "ChabbyNb_API\\Controllers\\MembersController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-03-29T15:06:04.704Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 1,
+              "Title": "BookingExpirationService.cs",
+              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Services\\BookingExpirationService.cs",
+              "RelativeDocumentMoniker": "ChabbyNb_API\\Services\\BookingExpirationService.cs",
+              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Services\\BookingExpirationService.cs",
+              "RelativeToolTip": "ChabbyNb_API\\Services\\BookingExpirationService.cs",
+              "ViewState": "AgIAAFAAAAAAAAAAAAAwwC0AAAAuAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-03-29T17:50:23.395Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "StripePaymentService.cs",
+              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Services\\StripePaymentService.cs",
+              "RelativeDocumentMoniker": "ChabbyNb_API\\Services\\StripePaymentService.cs",
+              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Services\\StripePaymentService.cs",
+              "RelativeToolTip": "ChabbyNb_API\\Services\\StripePaymentService.cs",
+              "ViewState": "AgIAAJAAAAAAAAAAAAAvwLUAAAAQAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-03-29T17:26:33.41Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "Payment.cs",
+              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\Payment.cs",
+              "RelativeDocumentMoniker": "ChabbyNb_API\\Models\\Payment.cs",
+              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\Payment.cs",
+              "RelativeToolTip": "ChabbyNb_API\\Models\\Payment.cs",
+              "ViewState": "AgIAAAwAAAAAAAAAAAAkwFMAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-03-29T17:26:11.987Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
               "Title": "BookingDto.cs",
               "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\DTOs\\BookingDto.cs",
               "RelativeDocumentMoniker": "ChabbyNb_API\\Models\\DTOs\\BookingDto.cs",
@@ -50,7 +131,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 8,
               "Title": "WebhooksController.cs",
               "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\WebhooksController.cs",
               "RelativeDocumentMoniker": "ChabbyNb_API\\Controllers\\WebhooksController.cs",
@@ -63,46 +144,33 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "StripePaymentService.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Services\\StripePaymentService.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Services\\StripePaymentService.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Services\\StripePaymentService.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Services\\StripePaymentService.cs",
-              "ViewState": "AgIAAHoAAAAAAAAAAAAEwJ0AAAAIAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-29T14:55:08.397Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 6,
               "Title": "StripePaymentService.cs",
               "DocumentMoniker": "C:\\Users\\almog\\AppData\\Local\\SourceServer\\757220900007ef888409577b630a87e79d9b9b716811a00614eed65c7ba0c778\\ChabbyNb_API\\Services\\StripePaymentService.cs",
               "RelativeDocumentMoniker": "..\\..\\..\\..\\AppData\\Local\\SourceServer\\757220900007ef888409577b630a87e79d9b9b716811a00614eed65c7ba0c778\\ChabbyNb_API\\Services\\StripePaymentService.cs",
               "ToolTip": "C:\\Users\\almog\\AppData\\Local\\SourceServer\\757220900007ef888409577b630a87e79d9b9b716811a00614eed65c7ba0c778\\ChabbyNb_API\\Services\\StripePaymentService.cs [Read Only]",
               "RelativeToolTip": "..\\..\\..\\..\\AppData\\Local\\SourceServer\\757220900007ef888409577b630a87e79d9b9b716811a00614eed65c7ba0c778\\ChabbyNb_API\\Services\\StripePaymentService.cs [Read Only]",
-              "ViewState": "AgIAAJsAAAAAAAAAAAAnwLAAAAAQAAAAAQAAAA==",
+              "ViewState": "AgIAAJUAAAAAAAAAAAAnwKUAAAA4AAAAAQAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-03-29T14:33:49.238Z",
               "EditorCaption": " [Read Only]"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": "BookingController.cs",
               "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\BookingController.cs",
               "RelativeDocumentMoniker": "ChabbyNb_API\\Controllers\\BookingController.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\BookingController.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Controllers\\BookingController.cs",
-              "ViewState": "AgIAAJMAAAAAAAAAAAAWwMAAAABNAAAAAAAAAA==",
+              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\BookingController.cs*",
+              "RelativeToolTip": "ChabbyNb_API\\Controllers\\BookingController.cs*",
+              "ViewState": "AgIAALsAAAAAAAAAAAAAwMwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-03-29T12:12:55.897Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 9,
               "Title": "FinanceController.cs",
               "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\FinanceController.cs",
               "RelativeDocumentMoniker": "ChabbyNb_API\\Controllers\\FinanceController.cs",

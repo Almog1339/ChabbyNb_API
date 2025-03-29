@@ -1,81 +1,84 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using ChabbyNb_API.Models;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
 
-namespace ChabbyNb_API.Models
+public class Payment
 {
-    public class Payment
-    {
-        [Key]
-        public int PaymentID { get; set; }
+    [Key]
+    public int PaymentID { get; set; }
 
-        public int BookingID { get; set; }
+    public int BookingID { get; set; }
 
-        [Required]
-        [StringLength(100)]
-        public string PaymentIntentID { get; set; }
+    [StringLength(50)]
+    public string? PaymentIntentID { get; set; } // Nullable nvarchar(50)
 
-        [Required]
-        [Column(TypeName = "decimal(10, 2)")]
-        public decimal Amount { get; set; }
+    [Required]
+    [Column(TypeName = "decimal(10, 2)")]
+    public decimal Amount { get; set; }
 
-        [Required]
-        [StringLength(20)]
-        public string Currency { get; set; } // e.g., "USD", "EUR"
+    [Required]
+    [StringLength(20)]
+    public string Currency { get; set; } // nvarchar(20), not nullable
 
-        [Required]
-        [StringLength(20)]
-        public string Status { get; set; } // "succeeded", "pending", "failed", "refunded", etc.
+    [StringLength(50)]
+    public string? Status { get; set; } // Nullable nvarchar(50)
 
-        [StringLength(255)]
-        public string PaymentMethod { get; set; } // "card", "bank_transfer", etc.
+    [StringLength(255)]
+    public string? PaymentMethod { get; set; } // Nullable nvarchar(255)
 
-        [StringLength(30)]
-        public string LastFour { get; set; } // Last 4 digits of card
+    [StringLength(50)]
+    public string? LastFour { get; set; } // Nullable nvarchar(50)
 
-        [StringLength(50)]
-        public string CardBrand { get; set; } // "visa", "mastercard", etc.
+    [StringLength(50)]
+    public string? CardBrand { get; set; } // Nullable nvarchar(50)
 
-        public DateTime CreatedDate { get; set; }
+    [Required]
+    public DateTime CreatedDate { get; set; } // datetime2(7), not nullable
 
-        public DateTime? CompletedDate { get; set; }
+    public DateTime? CompletedDate { get; set; } // Nullable datetime2(7)
 
-        [ForeignKey("BookingID")]
-        public virtual Booking Booking { get; set; }
-    }
+    [ForeignKey("BookingID")]
+    public virtual Booking Booking { get; set; }
 
-    public class Refund
-    {
-        [Key]
-        public int RefundID { get; set; }
+    // Navigation property for refunds
+    public virtual ICollection<Refund> Refunds { get; set; } = new HashSet<Refund>();
+}
 
-        public int PaymentID { get; set; }
+public class Refund
+{
+    [Key]
+    public int RefundID { get; set; }
 
-        [Required]
-        [StringLength(100)]
-        public string RefundIntentID { get; set; }
+    [Required]
+    public int PaymentID { get; set; }
 
-        [Required]
-        [Column(TypeName = "decimal(10, 2)")]
-        public decimal Amount { get; set; }
+    [Required]
+    [StringLength(100)]
+    public string RefundIntentID { get; set; } // nvarchar(100), not nullable
 
-        [Required]
-        [StringLength(20)]
-        public string Status { get; set; } // "succeeded", "pending", "failed"
+    [Required]
+    [Column(TypeName = "decimal(10, 2)")]
+    public decimal Amount { get; set; }
 
-        [StringLength(255)]
-        public string Reason { get; set; }
+    [Required]
+    [StringLength(20)]
+    public string Status { get; set; } // nvarchar(20), not nullable
 
-        public int AdminID { get; set; } // The admin who processed the refund
+    [Required]
+    [StringLength(255)]
+    public string Reason { get; set; } // nvarchar(255), not nullable
 
-        public DateTime CreatedDate { get; set; }
+    [Required]
+    public int AdminID { get; set; } // int, not nullable
 
-        public DateTime? CompletedDate { get; set; }
+    [Required]
+    public DateTime CreatedDate { get; set; } // datetime2(7), not nullable
 
-        [ForeignKey("PaymentID")]
-        public virtual Payment Payment { get; set; }
+    public DateTime? CompletedDate { get; set; } // Nullable datetime2(7)
 
-        [ForeignKey("AdminID")]
-        public virtual User Admin { get; set; }
-    }
+    [ForeignKey("PaymentID")]
+    public virtual Payment Payment { get; set; }
+
+    [ForeignKey("AdminID")]
+    public virtual User Admin { get; set; }
 }

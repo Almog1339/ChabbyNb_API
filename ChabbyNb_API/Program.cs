@@ -65,6 +65,7 @@ builder.Services.AddDbContext<ChabbyNbDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add session services (we'll keep these for backward compatibility during transition)
+builder.Services.AddHostedService<BookingExpirationService>();
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IFileService, FileService>();

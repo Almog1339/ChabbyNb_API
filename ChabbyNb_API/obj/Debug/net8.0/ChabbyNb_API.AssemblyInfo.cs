@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ChabbyNb_API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fe6127464cf9a8c1b4c3ed7265bc39f86cf31b45")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+da6b505607e36733f935dedfc46cce03fcaba0d5")]
 [assembly: System.Reflection.AssemblyProductAttribute("ChabbyNb_API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ChabbyNb_API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

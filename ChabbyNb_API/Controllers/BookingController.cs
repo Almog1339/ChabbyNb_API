@@ -27,8 +27,9 @@ namespace ChabbyNb_API.Controllers
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
         private readonly ILogger<BookingsController> _logger;
+        private readonly BookingExpirationService _expirationService;
 
-        public BookingsController(ChabbyNbDbContext context, IPaymentService paymentService, IConfiguration configuration, IEmailService emailService, ILogger<BookingsController> logger)
+        public BookingsController(ChabbyNbDbContext context, IPaymentService paymentService, IConfiguration configuration, IEmailService emailService, ILogger<BookingsController> logger, BookingExpirationService expirationService)
         {
             _context = context;
             _priceService = new PriceCalculationService(context);
@@ -36,6 +37,7 @@ namespace ChabbyNb_API.Controllers
             _configuration = configuration;
             _emailService = emailService;
             _logger = logger;
+            _expirationService = expirationService;
         }
 
         // GET: api/Bookings
@@ -201,6 +203,7 @@ namespace ChabbyNb_API.Controllers
                 _context.Bookings.Add(booking);
                 await _context.SaveChangesAsync();
 
+
                 // Increment usage count for the promotion if applicable
                 if (priceResult.PromotionId.HasValue)
                 {
@@ -332,42 +335,166 @@ namespace ChabbyNb_API.Controllers
             }
         }
 
-        // PATCH: api/Bookings/5/Cancel
+        // POST: api/Bookings/5/Cancel
         [HttpPost("{id}/Cancel")]
         public async Task<IActionResult> CancelBooking(int id)
         {
             int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
             var booking = await _context.Bookings
+                .Include(b => b.User)
+                .Include(b => b.Apartment)
                 .FirstOrDefaultAsync(b =>
                     b.BookingID == id &&
                     b.UserID == userId &&
                     b.BookingStatus != "Canceled" &&
-                    b.BookingStatus != "Completed" &&
-                    b.CheckInDate > DateTime.Today);
+                    b.BookingStatus != "Completed");
 
             if (booking == null)
             {
-                return NotFound();
+                return NotFound(new { error = "Booking not found or cannot be canceled" });
             }
+
+            // Check if the booking is still pending and created more than 10 minutes ago
+            if (booking.BookingStatus == "Pending" && booking.PaymentStatus == "Pending" &&
+                (DateTime.Now - booking.CreatedDate).TotalMinutes > 10)
+            {
+                booking.BookingStatus = "Canceled";
+                booking.PaymentStatus = "Expired";
+
+                await _context.SaveChangesAsync();
+
+                // Send email notification that booking expired due to non-payment
+                try
+                {
+                    await SendBookingExpiredEmail(booking);
+                    _logger.LogInformation($"Sent booking expired email for booking {booking.BookingID}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Error sending booking expired email for booking {booking.BookingID}");
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Booking was canceled because payment was not completed within the time limit.",
+                    booking
+                });
+            }
+
+            // For confirmed bookings, check cancellation policy based on days until check-in
+            TimeSpan daysUntilCheckIn = booking.CheckInDate - DateTime.Now;
+            bool isEligibleForAutoRefund = daysUntilCheckIn.TotalDays >= 7;
 
             // Update booking status
             booking.BookingStatus = "Canceled";
 
-            // For demo purposes, assume full refund if cancellation is at least 3 days before check-in
-            TimeSpan daysUntilCheckIn = booking.CheckInDate - DateTime.Today;
-            if (daysUntilCheckIn.TotalDays >= 3)
+            // Handle refund based on cancellation policy
+            if (booking.PaymentStatus == "Paid" || booking.PaymentStatus == "Partially Paid")
             {
-                booking.PaymentStatus = "Refunded";
-            }
-            else
-            {
-                booking.PaymentStatus = "Partially Refunded";
+                // Find payment record
+                var payment = await _context.Payments
+                    .FirstOrDefaultAsync(p => p.BookingID == booking.BookingID && p.Status == "succeeded");
+
+                if (payment != null)
+                {
+                    if (isEligibleForAutoRefund)
+                    {
+                        // Process automatic full refund
+                        try
+                        {
+                            int adminId = 1; // Use a default admin ID for system-generated refunds
+                            var refundReason = "Automatic refund - Cancellation more than 7 days before check-in";
+
+                            await _paymentService.ProcessRefund(payment.PaymentID, payment.Amount, refundReason, adminId);
+
+                            booking.PaymentStatus = "Refunded";
+                            _logger.LogInformation($"Automatic full refund processed for booking {booking.BookingID}");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, $"Error processing automatic refund for booking {booking.BookingID}");
+                            booking.PaymentStatus = "Cancellation Pending"; // Mark for admin review
+                        }
+                    }
+                    else
+                    {
+                        // No automatic refund, mark for admin review
+                        booking.PaymentStatus = "Cancellation Pending";
+                        _logger.LogInformation($"Booking {booking.BookingID} canceled, pending admin review for refund");
+                    }
+                }
             }
 
             await _context.SaveChangesAsync();
 
-            return Ok(booking);
+            // Send cancellation confirmation email
+            try
+            {
+                await SendBookingCancellationEmail(booking, isEligibleForAutoRefund);
+                _logger.LogInformation($"Sent booking cancellation email for booking {booking.BookingID}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error sending cancellation email for booking {booking.BookingID}");
+            }
+
+            return Ok(new
+            {
+                success = true,
+                message = isEligibleForAutoRefund
+                    ? "Your booking has been canceled with a full refund."
+                    : "Your booking has been canceled. Refund eligibility will be reviewed by an administrator.",
+                booking
+            });
+        }
+
+        // Helper method to send booking expired email
+        private async Task SendBookingExpiredEmail(Booking booking)
+        {
+            var model = new
+            {
+                GuestName = booking.User.FirstName ?? booking.User.Username,
+                BookingID = booking.BookingID,
+                ReservationNumber = booking.ReservationNumber,
+                ApartmentTitle = booking.Apartment.Title,
+                CheckInDate = booking.CheckInDate.ToShortDateString(),
+                CheckOutDate = booking.CheckOutDate.ToShortDateString(),
+                TotalPrice = booking.TotalPrice.ToString("C")
+            };
+
+            await _emailService.SendEmailAsync(
+                booking.User.Email,
+                "Your ChabbyNb Booking Reservation Expired",
+                "BookingExpired",
+                model
+            );
+        }
+
+        // Helper method to send booking cancellation email
+        private async Task SendBookingCancellationEmail(Booking booking, bool isEligibleForRefund)
+        {
+            var model = new
+            {
+                GuestName = booking.User.FirstName ?? booking.User.Username,
+                ReservationNumber = booking.ReservationNumber,
+                ApartmentTitle = booking.Apartment.Title,
+                CheckInDate = booking.CheckInDate.ToShortDateString(),
+                CheckOutDate = booking.CheckOutDate.ToShortDateString(),
+                TotalPrice = booking.TotalPrice.ToString("C"),
+                IsEligibleForRefund = isEligibleForRefund,
+                RefundMessage = isEligibleForRefund
+                    ? "A full refund has been processed and will be returned to your original payment method."
+                    : "Your cancellation request will be reviewed by our team. If eligible for a refund, it will be processed within 5-7 business days."
+            };
+
+            await _emailService.SendEmailAsync(
+                booking.User.Email,
+                "Your ChabbyNb Booking Has Been Canceled",
+                "BookingCancellation",
+                model
+            );
         }
 
         // Helper method to check if apartment is available for specific dates
@@ -433,7 +560,7 @@ namespace ChabbyNb_API.Controllers
                     // Create a new payment intent
                     string clientSecret = await _paymentService.CreatePaymentIntent(booking);
 
-                    // Get the newly created payment record
+                    // Fetch the newly created payment record
                     payment = await _context.Payments
                         .FirstOrDefaultAsync(p => p.BookingID == booking.BookingID);
 
@@ -443,6 +570,9 @@ namespace ChabbyNb_API.Controllers
                     }
                 }
 
+                // Set up Stripe API key
+                StripeConfiguration.ApiKey = _configuration["Stripe:SecretKey"];
+
                 // Initialize Stripe services
                 var stripePaymentIntentService = new Stripe.PaymentIntentService();
                 var stripePaymentMethodService = new Stripe.PaymentMethodService();
@@ -451,23 +581,33 @@ namespace ChabbyNb_API.Controllers
                 // Get the current payment intent from Stripe
                 var paymentIntent = await stripePaymentIntentService.GetAsync(payment.PaymentIntentID);
 
-                // Check if we need to attach a payment method
-                if (paymentIntent.Status == "requires_payment_method" && !string.IsNullOrEmpty(confirmationDto.PaymentMethodId))
+                _logger.LogInformation($"Payment intent {payment.PaymentIntentID} current status: {paymentIntent.Status}");
+
+                // If a payment method ID was provided, attach it to the payment intent
+                if (!string.IsNullOrEmpty(confirmationDto.PaymentMethodId))
                 {
-                    // Get payment method details
+                    _logger.LogInformation($"Attaching payment method {confirmationDto.PaymentMethodId} to payment intent {payment.PaymentIntentID}");
+
+                    // Get the payment method to check if it belongs to a customer
                     var paymentMethod = await stripePaymentMethodService.GetAsync(confirmationDto.PaymentMethodId);
 
-                    // Get or create a customer for this user
-                    string customerId = null;
+                    // Set up the update options for the payment intent
+                    var updateOptions = new PaymentIntentUpdateOptions
+                    {
+                        PaymentMethod = confirmationDto.PaymentMethodId
+                    };
 
-                    // If the payment method already belongs to a customer
+                    // If the payment method belongs to a customer, include that customer
                     if (!string.IsNullOrEmpty(paymentMethod.CustomerId))
                     {
-                        customerId = paymentMethod.CustomerId;
+                        _logger.LogInformation($"Payment method belongs to customer {paymentMethod.CustomerId}");
+                        updateOptions.Customer = paymentMethod.CustomerId;
                     }
                     else
                     {
-                        // Try to find an existing customer by email
+                        _logger.LogInformation("Payment method does not belong to a customer, finding or creating one");
+
+                        // Try to find an existing customer for this user
                         var customerListOptions = new CustomerListOptions
                         {
                             Email = booking.User.Email,
@@ -478,41 +618,56 @@ namespace ChabbyNb_API.Controllers
 
                         if (customers.Data.Count > 0)
                         {
-                            customerId = customers.Data[0].Id;
+                            _logger.LogInformation($"Found existing customer {customers.Data[0].Id} for user {booking.User.Email}");
+                            updateOptions.Customer = customers.Data[0].Id;
                         }
                         else
                         {
+                            _logger.LogInformation($"Creating new customer for user {booking.User.Email}");
+
                             // Create a new customer
                             var customerOptions = new CustomerCreateOptions
                             {
                                 Email = booking.User.Email,
-                                Name = $"{booking.User.FirstName} {booking.User.LastName}".Trim(),
-                                Phone = booking.User.PhoneNumber,
-                                PaymentMethod = confirmationDto.PaymentMethodId,
+                                Name = string.IsNullOrEmpty(booking.User.FirstName) && string.IsNullOrEmpty(booking.User.LastName)
+                                    ? booking.User.Username
+                                    : $"{booking.User.FirstName} {booking.User.LastName}".Trim(),
+                                Phone = booking.User.PhoneNumber
                             };
 
                             var customer = await stripeCustomerService.CreateAsync(customerOptions);
-                            customerId = customer.Id;
+                            _logger.LogInformation($"Created new customer {customer.Id}");
+                            updateOptions.Customer = customer.Id;
                         }
                     }
 
-                    // Update the payment intent with customer and payment method
-                    var updateOptions = new PaymentIntentUpdateOptions
-                    {
-                        Customer = customerId,
-                        PaymentMethod = confirmationDto.PaymentMethodId
-                    };
-
+                    // Update the payment intent with the payment method and customer
+                    _logger.LogInformation("Updating payment intent with payment method and customer");
                     paymentIntent = await stripePaymentIntentService.UpdateAsync(payment.PaymentIntentID, updateOptions);
+                    _logger.LogInformation($"Updated payment intent, new status: {paymentIntent.Status}");
                 }
 
-                // Check if we need to confirm the payment
-                if (paymentIntent.Status == "requires_confirmation" ||
-                    (paymentIntent.Status == "requires_payment_method" && !string.IsNullOrEmpty(confirmationDto.PaymentMethodId)))
+                // Check if we need to confirm the payment intent
+                if (paymentIntent.Status == "requires_confirmation" || paymentIntent.Status == "requires_payment_method")
                 {
+                    _logger.LogInformation($"Payment intent requires confirmation, status: {paymentIntent.Status}");
+
                     // Define return URL from server configuration
-                    string baseUrl = _configuration["ApplicationUrl"] ?? $"{Request.Scheme}://{Request.Host}";
+                    string baseUrl = _configuration["ApplicationUrl"];
+
+                    // Make sure the URL is properly formatted and accessible
+                    if (string.IsNullOrEmpty(baseUrl) || !Uri.IsWellFormedUriString(baseUrl, UriKind.Absolute))
+                    {
+                        baseUrl = $"{Request.Scheme}://{Request.Host}";
+                        _logger.LogInformation($"Using request-based URL: {baseUrl}");
+                    }
+                    else
+                    {
+                        _logger.LogInformation($"Using configured URL: {baseUrl}");
+                    }
+
                     string returnUrl = $"{baseUrl}/bookings/confirmation/{booking.BookingID}";
+                    _logger.LogInformation($"Return URL: {returnUrl}");
 
                     // Confirm the payment intent
                     var confirmOptions = new PaymentIntentConfirmOptions
@@ -520,12 +675,16 @@ namespace ChabbyNb_API.Controllers
                         ReturnUrl = returnUrl
                     };
 
+                    _logger.LogInformation("Confirming payment intent");
                     paymentIntent = await stripePaymentIntentService.ConfirmAsync(payment.PaymentIntentID, confirmOptions);
+                    _logger.LogInformation($"Confirmed payment intent, new status: {paymentIntent.Status}");
                 }
 
                 // Check if additional action is required (3D Secure, etc.)
                 if (paymentIntent.Status == "requires_action")
                 {
+                    _logger.LogInformation("Payment requires additional action");
+
                     // Return the client secret and next action URL to the client
                     return Ok(new
                     {
@@ -538,11 +697,14 @@ namespace ChabbyNb_API.Controllers
                 }
 
                 // Update the payment record in our database
+                _logger.LogInformation($"Updating payment record for booking {booking.BookingID}");
                 payment = await _paymentService.ConfirmPayment(payment.PaymentIntentID);
+                _logger.LogInformation($"Payment status after confirmation: {payment.Status}");
 
                 // Update booking status based on payment status
                 if (payment.Status == "succeeded")
                 {
+                    _logger.LogInformation($"Payment succeeded for booking {booking.BookingID}");
                     booking.BookingStatus = "Confirmed";
                     booking.PaymentStatus = "Paid";
                     await _context.SaveChangesAsync();
@@ -551,17 +713,22 @@ namespace ChabbyNb_API.Controllers
                     try
                     {
                         await SendBookingConfirmationEmail(booking);
+                        _logger.LogInformation($"Sent booking confirmation email for booking {booking.BookingID}");
                     }
                     catch (Exception ex)
                     {
-                        // Log error but continue
                         _logger.LogError(ex, $"Error sending confirmation email for booking {booking.BookingID}");
                     }
                 }
                 else if (payment.Status == "canceled" || payment.Status == "failed")
                 {
+                    _logger.LogInformation($"Payment {payment.Status} for booking {booking.BookingID}");
                     booking.PaymentStatus = payment.Status == "canceled" ? "Canceled" : "Failed";
                     await _context.SaveChangesAsync();
+                }
+                else
+                {
+                    _logger.LogInformation($"Payment in state {payment.Status} for booking {booking.BookingID}");
                 }
 
                 // Get primary image URL
@@ -596,7 +763,8 @@ namespace ChabbyNb_API.Controllers
                     Neighborhood = booking.Apartment.Neighborhood,
                     PricePerNight = booking.Apartment.PricePerNight,
                     HasReview = false,
-                    PaymentIntentClientSecret = paymentIntent.ClientSecret
+                    PaymentIntentClientSecret = paymentIntent.ClientSecret,
+                    PaymentIntentId = paymentIntent.Id
                 };
 
                 return Ok(response);
@@ -604,7 +772,15 @@ namespace ChabbyNb_API.Controllers
             catch (StripeException ex)
             {
                 _logger.LogError(ex, $"Stripe error confirming payment for booking {id}: {ex.Message}");
-                return BadRequest(new { error = $"Payment processing error: {ex.Message}" });
+                _logger.LogError($"Stripe error details - Code: {ex.StripeError?.Code}, Type: {ex.StripeError?.Type}, Parameter: {ex.StripeError?.Param}");
+
+                return BadRequest(new
+                {
+                    error = $"Payment processing error: {ex.Message}",
+                    stripeErrorCode = ex.StripeError?.Code,
+                    stripeErrorType = ex.StripeError?.Type,
+                    stripeErrorParam = ex.StripeError?.Param
+                });
             }
             catch (Exception ex)
             {

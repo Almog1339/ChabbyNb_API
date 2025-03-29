@@ -123,7 +123,7 @@ namespace ChabbyNb_API.Services
                 _logger.LogInformation($"Created payment intent {intent.Id} for booking {booking.BookingID}");
 
                 // Create a payment record in our database
-                var payment = new Models.Payment
+                var payment = new Payment
                 {
                     BookingID = booking.BookingID,
                     PaymentIntentID = intent.Id,
@@ -249,7 +249,7 @@ namespace ChabbyNb_API.Services
         /// <param name="reason">Reason for the refund</param>
         /// <param name="adminId">ID of the admin processing the refund</param>
         /// <returns>The created refund record</returns>
-        public async Task<Models.Refund> ProcessRefund(int paymentId, decimal amount, string reason, int adminId)
+        public async Task<Refund> ProcessRefund(int paymentId, decimal amount, string reason, int adminId)
         {
             _logger.LogInformation($"Processing refund of {amount} for payment {paymentId} by admin {adminId}");
 
@@ -309,7 +309,7 @@ namespace ChabbyNb_API.Services
                 _logger.LogInformation($"Created Stripe refund {stripeRefund.Id} for payment {paymentId}");
 
                 // Create refund record in database
-                var refund = new Models.Refund
+                var refund = new Refund
                 {
                     PaymentID = paymentId,
                     RefundIntentID = stripeRefund.Id,
@@ -360,7 +360,7 @@ namespace ChabbyNb_API.Services
         /// <param name="chargeDetails">Details of the charge</param>
         /// <param name="adminId">ID of the admin processing the charge</param>
         /// <returns>The created payment record</returns>
-        public async Task<Models.Payment> ProcessManualCharge(ManualChargeDto chargeDetails, int adminId)
+        public async Task<Payment> ProcessManualCharge(ManualChargeDto chargeDetails, int adminId)
         {
             _logger.LogInformation($"Processing manual charge of {chargeDetails.Amount} for booking {chargeDetails.BookingID} by admin {adminId}");
 
@@ -394,7 +394,7 @@ namespace ChabbyNb_API.Services
                 };
 
                 // Create a payment record in our database first
-                var payment = new Models.Payment
+                var payment = new Payment
                 {
                     BookingID = booking.BookingID,
                     Amount = chargeDetails.Amount,
@@ -482,7 +482,7 @@ namespace ChabbyNb_API.Services
         /// </summary>
         /// <param name="paymentId">The payment ID</param>
         /// <returns>The payment record with related entities</returns>
-        public async Task<Models.Payment> GetPaymentById(int paymentId)
+        public async Task<Payment> GetPaymentById(int paymentId)
         {
             _logger.LogInformation($"Getting payment details for ID {paymentId}");
 
