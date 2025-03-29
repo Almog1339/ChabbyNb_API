@@ -31,6 +31,12 @@ namespace ChabbyNb_API.Models.DTOs
         public string PromotionCode { get; set; }
     }
 
+    public class PaymentConfirmationDto
+    {
+        [Required]
+        public string PaymentIntentId { get; set; }
+    }
+
     public class BookingResponseDto
     {
         public int BookingID { get; set; }
@@ -54,6 +60,8 @@ namespace ChabbyNb_API.Models.DTOs
         public decimal PricePerNight { get; set; }
         public int NightsCount => (CheckOutDate - CheckInDate).Days;
         public bool HasReview { get; set; }
+        public string PaymentIntentClientSecret { get; set; }
+
     }
 
     public class BookingDetailsDto
@@ -97,6 +105,12 @@ namespace ChabbyNb_API.Models.DTOs
         public decimal TotalPrice { get; set; }
         public decimal RefundAmount { get; set; }
         public string CancellationPolicy { get; set; }
+        [Required]
+        public string CancellationReason { get; set; }
+
+        public bool FullRefund { get; set; } = true;
+
+        public decimal? RefundAmount { get; set; }
     }
 
     public class ReviewSummaryDto

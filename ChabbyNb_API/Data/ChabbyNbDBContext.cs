@@ -24,6 +24,10 @@ namespace ChabbyNb_API.Data
         public DbSet<Refund> Refunds { get; set; }
         public DbSet<SeasonalPricing> SeasonalPricings { get; set; }
         public DbSet<Promotion> Promotions { get; set; }
+        public DbSet<ContactMessage> ContactMessages { get; set; }
+        public DbSet<ChatConversation> ChatConversations { get; set; }
+        public DbSet<ChatMessage> ChatMessages { get; set; }
+        public DbSet<MessageTemplate> MessageTemplates { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

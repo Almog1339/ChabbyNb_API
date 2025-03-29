@@ -22,11 +22,15 @@ namespace ChabbyNb_API.Controllers
     {
         private readonly ChabbyNbDbContext _context;
         private readonly PriceCalculationService _priceService;
+        private readonly IPaymentService _paymentService = new IPaymentService();
+        private readonly IConfiguration _configuration;
 
-        public BookingsController(ChabbyNbDbContext context)
+        public BookingsController(ChabbyNbDbContext context, IPaymentService paymentService, IConfiguration configuration)
         {
             _context = context;
             _priceService = new PriceCalculationService(context);
+            _paymentService = paymentService;
+            _configuration = configuration;
         }
 
         // GET: api/Bookings
@@ -105,7 +109,9 @@ namespace ChabbyNb_API.Controllers
 
         // POST: api/Bookings
         [HttpPost]
-        public async Task<ActionResult<Booking>> CreateBooking([FromBody] BookingCreateDto bookingDto)
+        // POST: api/Bookings
+        [HttpPost]
+        public async Task<ActionResult<BookingResponseDto>> CreateBooking([FromBody] BookingCreateDto bookingDto)
         {
             if (!ModelState.IsValid)
             {
@@ -116,6 +122,7 @@ namespace ChabbyNb_API.Controllers
 
             // Check if apartment exists
             var apartment = await _context.Apartments
+                .Include(a => a.ApartmentImages)
                 .FirstOrDefaultAsync(a => a.ApartmentID == bookingDto.ApartmentID && a.IsActive);
 
             if (apartment == null)
@@ -181,12 +188,11 @@ namespace ChabbyNb_API.Controllers
                     TotalPrice = priceResult.TotalPrice,
                     PromotionID = priceResult.PromotionId,
                     PromotionCode = priceResult.PromotionCode ?? String.Empty,
-                    BookingStatus = "Pending",
+                    BookingStatus = "Pending", // Initial status is Pending until payment is confirmed
                     PaymentStatus = "Pending",
                     SpecialRequests = bookingDto.SpecialRequests,
                     ReservationNumber = GenerateReservationNumber(),
                     CreatedDate = DateTime.Now,
-                    
                 };
 
                 _context.Bookings.Add(booking);
@@ -203,11 +209,60 @@ namespace ChabbyNb_API.Controllers
                     }
                 }
 
-                return CreatedAtAction(nameof(GetBooking), new { id = booking.BookingID }, booking);
+                // Create a payment intent for this booking
+                var user = await _context.Users.FindAsync(userId);
+
+                if (user == null)
+                {
+                    return BadRequest(new { error = "User not found" });
+                }
+
+                booking.User = user;
+                booking.Apartment = apartment;
+
+                // Create a payment intent using the payment service
+                string clientSecret = await _paymentService.CreatePaymentIntent(booking);
+
+                // Get primary image URL for the apartment
+                string primaryImageUrl = apartment.ApartmentImages
+                    .Where(ai => ai.IsPrimary)
+                    .Select(ai => ai.ImageUrl)
+                    .FirstOrDefault() ??
+                    apartment.ApartmentImages
+                    .Select(ai => ai.ImageUrl)
+                    .FirstOrDefault();
+
+                // Create response DTO
+                var response = new BookingResponseDto
+                {
+                    BookingID = booking.BookingID,
+                    ApartmentID = booking.ApartmentID,
+                    ApartmentTitle = apartment.Title,
+                    PrimaryImageUrl = primaryImageUrl,
+                    CheckInDate = booking.CheckInDate,
+                    CheckOutDate = booking.CheckOutDate,
+                    GuestCount = booking.GuestCount,
+                    PetCount = booking.PetCount,
+                    BasePrice = booking.BasePrice,
+                    DiscountAmount = booking.DiscountAmount ?? 0,
+                    TotalPrice = booking.TotalPrice,
+                    PromotionCode = booking.PromotionCode,
+                    BookingStatus = booking.BookingStatus,
+                    PaymentStatus = booking.PaymentStatus,
+                    ReservationNumber = booking.ReservationNumber,
+                    CreatedDate = booking.CreatedDate,
+                    Address = apartment.Address,
+                    Neighborhood = apartment.Neighborhood,
+                    PricePerNight = apartment.PricePerNight,
+                    HasReview = false,
+                    PaymentIntentClientSecret = clientSecret // Include client secret for frontend payment processing
+                };
+
+                return Ok(response);
             }
             catch (Exception ex)
             {
-                return BadRequest(new { error = $"Error calculating booking price: {ex.Message}" });
+                return BadRequest(new { error = $"Error creating booking: {ex.Message}" });
             }
         }
 
@@ -331,6 +386,198 @@ namespace ChabbyNb_API.Controllers
             string randomDigits = new Random().Next(1000, 9999).ToString();
 
             return $"CB-{dateString}-{randomDigits}";
+        }
+
+        // POST: api/Bookings/{id}/ConfirmPayment
+        [HttpPost("{id}/ConfirmPayment")]
+        public async Task<ActionResult<BookingResponseDto>> ConfirmPayment(int id, [FromBody] PaymentConfirmationDto confirmationDto)
+        {
+            int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+            var booking = await _context.Bookings
+                .Include(b => b.Apartment)
+                    .ThenInclude(a => a.ApartmentImages)
+                .Include(b => b.User)
+                .FirstOrDefaultAsync(b => b.BookingID == id && b.UserID == userId);
+
+            if (booking == null)
+            {
+                return NotFound(new { error = "Booking not found" });
+            }
+
+            if (booking.BookingStatus != "Pending" || booking.PaymentStatus != "Pending")
+            {
+                return BadRequest(new { error = "Booking is not in a pending state" });
+            }
+
+            try
+            {
+                // Confirm the payment using the payment service
+                var payment = await _paymentService.ConfirmPayment(confirmationDto.PaymentIntentId);
+
+                if (payment.Status == "succeeded")
+                {
+                    // Update booking status
+                    booking.BookingStatus = "Confirmed";
+                    booking.PaymentStatus = "Paid";
+                    await _context.SaveChangesAsync();
+
+                    // Send confirmation email
+                    try
+                    {
+                        await SendBookingConfirmationEmail(booking);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log the error but don't fail the request
+                        Console.WriteLine($"Error sending confirmation email: {ex.Message}");
+                    }
+                }
+                else if (payment.Status == "canceled" || payment.Status == "failed")
+                {
+                    booking.PaymentStatus = payment.Status == "canceled" ? "Canceled" : "Failed";
+                    await _context.SaveChangesAsync();
+                }
+
+                // Get primary image URL
+                string primaryImageUrl = booking.Apartment.ApartmentImages
+                    .Where(ai => ai.IsPrimary)
+                    .Select(ai => ai.ImageUrl)
+                    .FirstOrDefault() ??
+                    booking.Apartment.ApartmentImages
+                    .Select(ai => ai.ImageUrl)
+                    .FirstOrDefault();
+
+                // Create response DTO
+                var response = new BookingResponseDto
+                {
+                    BookingID = booking.BookingID,
+                    ApartmentID = booking.ApartmentID,
+                    ApartmentTitle = booking.Apartment.Title,
+                    PrimaryImageUrl = primaryImageUrl,
+                    CheckInDate = booking.CheckInDate,
+                    CheckOutDate = booking.CheckOutDate,
+                    GuestCount = booking.GuestCount,
+                    PetCount = booking.PetCount,
+                    BasePrice = booking.BasePrice,
+                    DiscountAmount = booking.DiscountAmount ?? 0,
+                    TotalPrice = booking.TotalPrice,
+                    PromotionCode = booking.PromotionCode,
+                    BookingStatus = booking.BookingStatus,
+                    PaymentStatus = booking.PaymentStatus,
+                    ReservationNumber = booking.ReservationNumber,
+                    CreatedDate = booking.CreatedDate,
+                    Address = booking.Apartment.Address,
+                    Neighborhood = booking.Apartment.Neighborhood,
+                    PricePerNight = booking.Apartment.PricePerNight,
+                    HasReview = false
+                };
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = $"Error confirming payment: {ex.Message}" });
+            }
+        }
+
+        // Add this helper method to send a booking confirmation email
+        private async Task SendBookingConfirmationEmail(Booking booking)
+        {
+            // Get SMTP settings from configuration
+            var smtpSettings = _configuration.GetSection("SmtpSettings");
+
+            // Check if we should send real emails
+            if (!_configuration.GetValue<bool>("SendRealEmails", false))
+            {
+                // For development, just log the email
+                Console.WriteLine($"Confirmation email would be sent to: {booking.User.Email}");
+                Console.WriteLine($"Subject: Your ChabbyNb Booking Confirmation");
+                Console.WriteLine($"Booking: {booking.ReservationNumber} for {booking.Apartment.Title}");
+                return;
+            }
+
+            // Prepare email message
+            string subject = "Your ChabbyNb Booking Confirmation";
+            string body = $@"
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background-color: #ff5a5f; padding: 20px; color: white; text-align: center; }}
+                .content {{ padding: 20px; }}
+                .booking-details {{ background-color: #f8f8f8; padding: 15px; margin: 20px 0; border-radius: 5px; }}
+                .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #666; }}
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1>Booking Confirmation</h1>
+                </div>
+                <div class='content'>
+                    <p>Dear {booking.User.FirstName ?? booking.User.Username},</p>
+                    <p>Thank you for booking with ChabbyNb! Your reservation has been confirmed.</p>
+                    
+                    <div class='booking-details'>
+                        <h3>Booking Details:</h3>
+                        <p><strong>Reservation Number:</strong> {booking.ReservationNumber}</p>
+                        <p><strong>Property:</strong> {booking.Apartment.Title}</p>
+                        <p><strong>Address:</strong> {booking.Apartment.Address}, {booking.Apartment.Neighborhood}</p>
+                        <p><strong>Check-in Date:</strong> {booking.CheckInDate.ToShortDateString()}</p>
+                        <p><strong>Check-out Date:</strong> {booking.CheckOutDate.ToShortDateString()}</p>
+                        <p><strong>Guests:</strong> {booking.GuestCount}</p>
+                        <p><strong>Total Amount Paid:</strong> ${booking.TotalPrice}</p>
+                    </div>
+                    
+                    <p>You can view your booking details at any time by logging into your ChabbyNb account.</p>
+                    
+                    <p>We hope you enjoy your stay! If you have any questions or need assistance, please don't hesitate to contact us.</p>
+                    
+                    <p>Best regards,<br>The ChabbyNb Team</p>
+                </div>
+                <div class='footer'>
+                    <p>© 2025 ChabbyNb. All rights reserved.</p>
+                    <p>25 Adrianou St, Athens, Greece</p>
+                </div>
+            </div>
+        </body>
+        </html>";
+
+            // Configure and send email
+            using (var client = new SmtpClient())
+            {
+                // Set up the SMTP client
+                client.Host = smtpSettings["Host"];
+                client.Port = int.Parse(smtpSettings["Port"] ?? "587");
+                client.EnableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
+                client.DeliveryMethod = SmtpDeliveryMethod.Network;
+                client.UseDefaultCredentials = false;
+
+                // Make sure credentials are correctly set
+                string username = smtpSettings["Username"];
+                string password = smtpSettings["Password"];
+
+                if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+                {
+                    throw new InvalidOperationException("SMTP username or password is not configured.");
+                }
+
+                client.Credentials = new NetworkCredential(username, password);
+
+                // Create the email message
+                using (var message = new MailMessage())
+                {
+                    message.From = new MailAddress(smtpSettings["FromEmail"], "ChabbyNb");
+                    message.Subject = subject;
+                    message.Body = body;
+                    message.IsBodyHtml = true;
+                    message.To.Add(new MailAddress(booking.User.Email));
+
+                    await client.SendMailAsync(message);
+                }
+            }
         }
     }
 }
