@@ -180,12 +180,13 @@ namespace ChabbyNb_API.Controllers
                     DiscountAmount = priceResult.DiscountAmount,
                     TotalPrice = priceResult.TotalPrice,
                     PromotionID = priceResult.PromotionId,
-                    PromotionCode = priceResult.PromotionCode,
+                    PromotionCode = priceResult.PromotionCode ?? String.Empty,
                     BookingStatus = "Pending",
                     PaymentStatus = "Pending",
                     SpecialRequests = bookingDto.SpecialRequests,
                     ReservationNumber = GenerateReservationNumber(),
-                    CreatedDate = DateTime.Now
+                    CreatedDate = DateTime.Now,
+                    
                 };
 
                 _context.Bookings.Add(booking);
@@ -265,7 +266,7 @@ namespace ChabbyNb_API.Controllers
         }
 
         // PATCH: api/Bookings/5/Cancel
-        [HttpPatch("{id}/Cancel")]
+        [HttpPost("{id}/Cancel")]
         public async Task<IActionResult> CancelBooking(int id)
         {
             int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));

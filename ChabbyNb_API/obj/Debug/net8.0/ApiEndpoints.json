@@ -1201,7 +1201,7 @@
     "ContainingType": "ChabbyNb_API.Controllers.BookingsController",
     "Method": "CancelBooking",
     "RelativePath": "api/Bookings/{id}/Cancel",
-    "HttpMethod": "PATCH",
+    "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
     "Parameters": [

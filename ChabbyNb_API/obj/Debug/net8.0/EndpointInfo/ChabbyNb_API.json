@@ -2244,7 +2244,7 @@
       }
     },
     "/api/Bookings/{id}/Cancel": {
-      "patch": {
+      "post": {
         "tags": [
           "Bookings"
         ],
