@@ -26,14 +26,16 @@ namespace ChabbyNb_API.Controllers
         private readonly IPaymentService _paymentService;
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
+        private readonly ILogger<BookingsController> _logger;
 
-        public BookingsController(ChabbyNbDbContext context, IPaymentService paymentService, IConfiguration configuration, IEmailService emailService)
+        public BookingsController(ChabbyNbDbContext context, IPaymentService paymentService, IConfiguration configuration, IEmailService emailService, ILogger<BookingsController> logger)
         {
             _context = context;
             _priceService = new PriceCalculationService(context);
             _paymentService = paymentService;
             _configuration = configuration;
             _emailService = emailService;
+            _logger = logger;
         }
 
         // GET: api/Bookings
@@ -131,7 +133,7 @@ namespace ChabbyNb_API.Controllers
                 return NotFound(new { error = "Apartment not found or not available" });
             }
 
-            // Check if dates are valid
+            // Validate booking details
             if (bookingDto.CheckInDate < DateTime.Today)
             {
                 return BadRequest(new { error = "Check-in date cannot be in the past" });
@@ -165,9 +167,9 @@ namespace ChabbyNb_API.Controllers
                 return BadRequest(new { error = "This apartment does not allow pets" });
             }
 
-            // Calculate total price using our pricing service
             try
             {
+                // Calculate total price using our pricing service
                 var priceResult = await _priceService.CalculateBookingPriceAsync(
                     bookingDto.ApartmentID,
                     bookingDto.CheckInDate,
@@ -175,7 +177,7 @@ namespace ChabbyNb_API.Controllers
                     bookingDto.PetCount,
                     bookingDto.PromotionCode);
 
-                // Create booking
+                // Create booking record
                 var booking = new Booking
                 {
                     UserID = userId,
@@ -188,18 +190,18 @@ namespace ChabbyNb_API.Controllers
                     DiscountAmount = priceResult.DiscountAmount,
                     TotalPrice = priceResult.TotalPrice,
                     PromotionID = priceResult.PromotionId,
-                    PromotionCode = priceResult.PromotionCode ?? String.Empty,
+                    PromotionCode = priceResult.PromotionCode ?? string.Empty,
                     BookingStatus = "Pending", // Initial status is Pending until payment is confirmed
                     PaymentStatus = "Pending",
                     SpecialRequests = bookingDto.SpecialRequests,
                     ReservationNumber = GenerateReservationNumber(),
-                    CreatedDate = DateTime.Now,
+                    CreatedDate = DateTime.Now
                 };
 
                 _context.Bookings.Add(booking);
                 await _context.SaveChangesAsync();
 
-                // Increment usage count for the promotion
+                // Increment usage count for the promotion if applicable
                 if (priceResult.PromotionId.HasValue)
                 {
                     var promotion = await _context.Promotions.FindAsync(priceResult.PromotionId.Value);
@@ -210,9 +212,8 @@ namespace ChabbyNb_API.Controllers
                     }
                 }
 
-                // Create a payment intent for this booking
+                // Load user data for the payment intent
                 var user = await _context.Users.FindAsync(userId);
-
                 if (user == null)
                 {
                     return BadRequest(new { error = "User not found" });
@@ -223,6 +224,15 @@ namespace ChabbyNb_API.Controllers
 
                 // Create a payment intent using the payment service
                 string clientSecret = await _paymentService.CreatePaymentIntent(booking);
+
+                // Find the payment record that was created
+                var payment = await _context.Payments
+                    .FirstOrDefaultAsync(p => p.BookingID == booking.BookingID);
+
+                if (payment == null)
+                {
+                    return BadRequest(new { error = "Failed to create payment record" });
+                }
 
                 // Get primary image URL for the apartment
                 string primaryImageUrl = apartment.ApartmentImages
@@ -247,7 +257,7 @@ namespace ChabbyNb_API.Controllers
                     BasePrice = booking.BasePrice,
                     DiscountAmount = booking.DiscountAmount ?? 0,
                     TotalPrice = booking.TotalPrice,
-                    PromotionCode = booking.PromotionCode,
+                    PromotionCode = booking.PromotionCode ?? string.Empty,
                     BookingStatus = booking.BookingStatus,
                     PaymentStatus = booking.PaymentStatus,
                     ReservationNumber = booking.ReservationNumber,
@@ -256,7 +266,8 @@ namespace ChabbyNb_API.Controllers
                     Neighborhood = apartment.Neighborhood,
                     PricePerNight = apartment.PricePerNight,
                     HasReview = false,
-                    PaymentIntentClientSecret = clientSecret // Include client secret for frontend payment processing
+                    PaymentIntentClientSecret = clientSecret, // Include client secret for frontend payment processing
+                    PaymentIntentId = payment.PaymentIntentID // Also include the payment intent ID
                 };
 
                 return Ok(response);
@@ -389,7 +400,6 @@ namespace ChabbyNb_API.Controllers
             return $"CB-{dateString}-{randomDigits}";
         }
 
-        // POST: api/Bookings/{id}/ConfirmPayment
         [HttpPost("{id}/ConfirmPayment")]
         public async Task<ActionResult<BookingResponseDto>> ConfirmPayment(int id, [FromBody] PaymentConfirmationDto confirmationDto)
         {
@@ -413,14 +423,126 @@ namespace ChabbyNb_API.Controllers
 
             try
             {
-                // Confirm the payment using the payment service
-                PaymentIntent intent = new PaymentIntent();
-                
-                var payment = await _paymentService.ConfirmPayment(confirmationDto.PaymentIntentId);
+                // Find the payment record in the database
+                var payment = await _context.Payments
+                    .FirstOrDefaultAsync(p => p.BookingID == booking.BookingID);
 
+                // If no payment record exists, create a new payment intent
+                if (payment == null)
+                {
+                    // Create a new payment intent
+                    string clientSecret = await _paymentService.CreatePaymentIntent(booking);
+
+                    // Get the newly created payment record
+                    payment = await _context.Payments
+                        .FirstOrDefaultAsync(p => p.BookingID == booking.BookingID);
+
+                    if (payment == null)
+                    {
+                        return BadRequest(new { error = "Failed to create payment record" });
+                    }
+                }
+
+                // Initialize Stripe services
+                var stripePaymentIntentService = new Stripe.PaymentIntentService();
+                var stripePaymentMethodService = new Stripe.PaymentMethodService();
+                var stripeCustomerService = new Stripe.CustomerService();
+
+                // Get the current payment intent from Stripe
+                var paymentIntent = await stripePaymentIntentService.GetAsync(payment.PaymentIntentID);
+
+                // Check if we need to attach a payment method
+                if (paymentIntent.Status == "requires_payment_method" && !string.IsNullOrEmpty(confirmationDto.PaymentMethodId))
+                {
+                    // Get payment method details
+                    var paymentMethod = await stripePaymentMethodService.GetAsync(confirmationDto.PaymentMethodId);
+
+                    // Get or create a customer for this user
+                    string customerId = null;
+
+                    // If the payment method already belongs to a customer
+                    if (!string.IsNullOrEmpty(paymentMethod.CustomerId))
+                    {
+                        customerId = paymentMethod.CustomerId;
+                    }
+                    else
+                    {
+                        // Try to find an existing customer by email
+                        var customerListOptions = new CustomerListOptions
+                        {
+                            Email = booking.User.Email,
+                            Limit = 1
+                        };
+
+                        var customers = await stripeCustomerService.ListAsync(customerListOptions);
+
+                        if (customers.Data.Count > 0)
+                        {
+                            customerId = customers.Data[0].Id;
+                        }
+                        else
+                        {
+                            // Create a new customer
+                            var customerOptions = new CustomerCreateOptions
+                            {
+                                Email = booking.User.Email,
+                                Name = $"{booking.User.FirstName} {booking.User.LastName}".Trim(),
+                                Phone = booking.User.PhoneNumber,
+                                PaymentMethod = confirmationDto.PaymentMethodId,
+                            };
+
+                            var customer = await stripeCustomerService.CreateAsync(customerOptions);
+                            customerId = customer.Id;
+                        }
+                    }
+
+                    // Update the payment intent with customer and payment method
+                    var updateOptions = new PaymentIntentUpdateOptions
+                    {
+                        Customer = customerId,
+                        PaymentMethod = confirmationDto.PaymentMethodId
+                    };
+
+                    paymentIntent = await stripePaymentIntentService.UpdateAsync(payment.PaymentIntentID, updateOptions);
+                }
+
+                // Check if we need to confirm the payment
+                if (paymentIntent.Status == "requires_confirmation" ||
+                    (paymentIntent.Status == "requires_payment_method" && !string.IsNullOrEmpty(confirmationDto.PaymentMethodId)))
+                {
+                    // Define return URL from server configuration
+                    string baseUrl = _configuration["ApplicationUrl"] ?? $"{Request.Scheme}://{Request.Host}";
+                    string returnUrl = $"{baseUrl}/bookings/confirmation/{booking.BookingID}";
+
+                    // Confirm the payment intent
+                    var confirmOptions = new PaymentIntentConfirmOptions
+                    {
+                        ReturnUrl = returnUrl
+                    };
+
+                    paymentIntent = await stripePaymentIntentService.ConfirmAsync(payment.PaymentIntentID, confirmOptions);
+                }
+
+                // Check if additional action is required (3D Secure, etc.)
+                if (paymentIntent.Status == "requires_action")
+                {
+                    // Return the client secret and next action URL to the client
+                    return Ok(new
+                    {
+                        requiresAction = true,
+                        paymentIntentId = paymentIntent.Id,
+                        clientSecret = paymentIntent.ClientSecret,
+                        nextActionUrl = paymentIntent.NextAction?.RedirectToUrl?.Url,
+                        bookingId = booking.BookingID
+                    });
+                }
+
+                // Update the payment record in our database
+                payment = await _paymentService.ConfirmPayment(payment.PaymentIntentID);
+
+                // Update booking status based on payment status
                 if (payment.Status == "succeeded")
                 {
-                    // Update booking status
                     booking.BookingStatus = "Confirmed";
                     booking.PaymentStatus = "Paid";
                     await _context.SaveChangesAsync();
@@ -432,8 +554,8 @@ namespace ChabbyNb_API.Controllers
                     }
                     catch (Exception ex)
                     {
-                        // Log the error but don't fail the request
-                        Console.WriteLine($"Error sending confirmation email: {ex.Message}");
+                        // Log error but continue
+                        _logger.LogError(ex, $"Error sending confirmation email for booking {booking.BookingID}");
                     }
                 }
                 else if (payment.Status == "canceled" || payment.Status == "failed")
@@ -473,13 +595,20 @@ namespace ChabbyNb_API.Controllers
                     Address = booking.Apartment.Address,
                     Neighborhood = booking.Apartment.Neighborhood,
                     PricePerNight = booking.Apartment.PricePerNight,
-                    HasReview = false
+                    HasReview = false,
+                    PaymentIntentClientSecret = paymentIntent.ClientSecret
                 };
 
                 return Ok(response);
             }
+            catch (StripeException ex)
+            {
+                _logger.LogError(ex, $"Stripe error confirming payment for booking {id}: {ex.Message}");
+                return BadRequest(new { error = $"Payment processing error: {ex.Message}" });
+            }
             catch (Exception ex)
             {
+                _logger.LogError(ex, $"Error confirming payment for booking {id}: {ex.Message}");
                 return BadRequest(new { error = $"Error confirming payment: {ex.Message}" });
             }
         }

@@ -35,6 +35,9 @@ namespace ChabbyNb_API.Models.DTOs
     {
         [Required]
         public string PaymentIntentId { get; set; }
+        [Required]
+
+        public string PaymentMethodId { get; set; }
     }
 
     public class BookingResponseDto
@@ -61,6 +64,7 @@ namespace ChabbyNb_API.Models.DTOs
         public int NightsCount => (CheckOutDate - CheckInDate).Days;
         public bool HasReview { get; set; }
         public string PaymentIntentClientSecret { get; set; }
+        public string PaymentIntentId { get; set; }
 
     }
 

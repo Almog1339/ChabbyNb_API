@@ -5101,6 +5101,10 @@
           "paymentIntentClientSecret": {
             "type": "string",
             "nullable": true
+          },
+          "paymentIntentId": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -5876,11 +5880,16 @@
       },
       "PaymentConfirmationDto": {
         "required": [
-          "paymentIntentId"
+          "paymentIntentId",
+          "paymentMethodId"
         ],
         "type": "object",
         "properties": {
           "paymentIntentId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "paymentMethodId": {
             "minLength": 1,
             "type": "string"
           }

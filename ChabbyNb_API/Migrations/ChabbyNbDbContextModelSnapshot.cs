@@ -85,7 +85,7 @@ namespace ChabbyNb_API.Migrations
 
                     b.HasKey("ApartmentID");
 
-                    b.ToTable("Apartments");
+                    b.ToTable("Apartments", (string)null);
                 });
 
             modelBuilder.Entity("ChabbyNb_API.Models.AdminLog", b =>
@@ -116,7 +116,7 @@ namespace ChabbyNb_API.Migrations
 
                     b.HasKey("LogID");
 
-                    b.ToTable("AdminLogs");
+                    b.ToTable("AdminLogs", (string)null);
                 });
 
             modelBuilder.Entity("ChabbyNb_API.Models.Amenity", b =>
@@ -148,7 +148,7 @@ namespace ChabbyNb_API.Migrations
 
                     b.HasKey("AmenityID");
 
-                    b.ToTable("Amenities");
+                    b.ToTable("Amenities", (string)null);
                 });
 
             modelBuilder.Entity("ChabbyNb_API.Models.ApartmentAmenity", b =>
@@ -171,7 +171,7 @@ namespace ChabbyNb_API.Migrations
 
                     b.HasIndex("ApartmentID");
 
-                    b.ToTable("ApartmentAmenities");
+                    b.ToTable("ApartmentAmenities", (string)null);
                 });
 
             modelBuilder.Entity("ChabbyNb_API.Models.ApartmentImage", b =>
@@ -205,7 +205,7 @@ namespace ChabbyNb_API.Migrations
 
                     b.HasIndex("ApartmentID");
 
-                    b.ToTable("ApartmentImages");
+                    b.ToTable("ApartmentImages", (string)null);
                 });
 
             modelBuilder.Entity("ChabbyNb_API.Models.Booking", b =>
@@ -281,7 +281,7 @@ namespace ChabbyNb_API.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("Bookings");
+                    b.ToTable("Bookings", (string)null);
                 });
 
             modelBuilder.Entity("ChabbyNb_API.Models.ChatConversation", b =>
@@ -319,7 +319,7 @@ namespace ChabbyNb_API.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("ChatConversations");
+                    b.ToTable("ChatConversations", (string)null);
                 });
 
             modelBuilder.Entity("ChabbyNb_API.Models.ChatMessage", b =>
@@ -371,7 +371,7 @@ namespace ChabbyNb_API.Migrations
 
                     b.HasIndex("TemplateID");
 
-                    b.ToTable("ChatMessages");
+                    b.ToTable("ChatMessages", (string)null);
                 });
 
             modelBuilder.Entity("ChabbyNb_API.Models.ContactMessage", b =>
@@ -425,7 +425,7 @@ namespace ChabbyNb_API.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("ContactMessages");
+                    b.ToTable("ContactMessages", (string)null);
                 });
 
             modelBuilder.Entity("ChabbyNb_API.Models.EmailVerification", b =>
@@ -465,7 +465,7 @@ namespace ChabbyNb_API.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("EmailVerifications");
+                    b.ToTable("EmailVerifications", (string)null);
                 });
 
             modelBuilder.Entity("ChabbyNb_API.Models.MessageTemplate", b =>
@@ -506,7 +506,7 @@ namespace ChabbyNb_API.Migrations
 
                     b.HasKey("TemplateID");
 
-                    b.ToTable("MessageTemplates");
+                    b.ToTable("MessageTemplates", (string)null);
                 });
 
             modelBuilder.Entity("ChabbyNb_API.Models.Payment", b =>
@@ -563,7 +563,7 @@ namespace ChabbyNb_API.Migrations
 
                     b.HasIndex("BookingID");
 
-                    b.ToTable("Payments");
+                    b.ToTable("Payments", (string)null);
                 });
 
             modelBuilder.Entity("ChabbyNb_API.Models.Promotion", b =>
@@ -630,7 +630,7 @@ namespace ChabbyNb_API.Migrations
 
                     b.HasIndex("ApartmentID");
 
-                    b.ToTable("Promotions");
+                    b.ToTable("Promotions", (string)null);
                 });
 
             modelBuilder.Entity("ChabbyNb_API.Models.Refund", b =>
@@ -677,7 +677,7 @@ namespace ChabbyNb_API.Migrations
 
                     b.HasIndex("PaymentID");
 
-                    b.ToTable("Refunds");
+                    b.ToTable("Refunds", (string)null);
                 });
 
             modelBuilder.Entity("ChabbyNb_API.Models.Review", b =>
@@ -715,7 +715,7 @@ namespace ChabbyNb_API.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("Reviews");
+                    b.ToTable("Reviews", (string)null);
                 });
 
             modelBuilder.Entity("ChabbyNb_API.Models.SeasonalPricing", b =>
@@ -761,7 +761,7 @@ namespace ChabbyNb_API.Migrations
 
                     b.HasIndex("ApartmentID");
 
-                    b.ToTable("SeasonalPricings");
+                    b.ToTable("SeasonalPricings", (string)null);
                 });
 
             modelBuilder.Entity("ChabbyNb_API.Models.Tempwd", b =>
@@ -790,7 +790,7 @@ namespace ChabbyNb_API.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("Tempwds");
+                    b.ToTable("Tempwds", (string)null);
                 });
 
             modelBuilder.Entity("ChabbyNb_API.Models.User", b =>
@@ -842,7 +842,7 @@ namespace ChabbyNb_API.Migrations
 
                     b.HasKey("UserID");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("ChabbyNb_API.Models.ApartmentAmenity", b =>

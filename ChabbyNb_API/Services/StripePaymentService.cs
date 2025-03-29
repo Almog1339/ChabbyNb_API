@@ -111,10 +111,10 @@ namespace ChabbyNb_API.Services
                     Metadata = metadata,
                     Description = $"Booking #{booking.ReservationNumber} - {booking.Apartment.Title}",
                     ReceiptEmail = booking.User.Email,
-                    CaptureMethod = "automatic", // Capture immediately
+                    CaptureMethod = "automatic", // This is good
                     StatementDescriptor = "ChabbyNb Apartment",
                     StatementDescriptorSuffix = "Booking",
-                    SetupFutureUsage = "off_session"  // Allow reuse for future off-session payments
+                    SetupFutureUsage = "off_session"  // This might need to be changed based on your needs
                 };
 
                 // Create the payment intent
@@ -173,12 +173,12 @@ namespace ChabbyNb_API.Services
 
             try
             {
-                // Retrieve the payment intent from Stripe
+                // קבל את ה-Payment Intent מ-Stripe
                 var service = new PaymentIntentService();
-                
+
                 var intent = await service.GetAsync(paymentIntentId);
 
-                // Find the payment in our database
+                // מצא את רשומת התשלום במסד הנתונים
                 var payment = await _context.Payments
                     .Include(p => p.Booking)
                     .FirstOrDefaultAsync(p => p.PaymentIntentID == paymentIntentId);
@@ -188,7 +188,7 @@ namespace ChabbyNb_API.Services
                     throw new InvalidOperationException($"Payment with intent ID {paymentIntentId} not found in database");
                 }
 
-                // Update payment details
+                // עדכן את פרטי התשלום
                 payment.Status = intent.Status;
                 payment.PaymentMethod = intent.PaymentMethodId;
 
@@ -196,11 +196,11 @@ namespace ChabbyNb_API.Services
                 {
                     payment.CompletedDate = DateTime.UtcNow;
 
-                    // Update booking status
+                    // עדכן את סטטוס ההזמנה
                     payment.Booking.PaymentStatus = "Paid";
                     payment.Booking.BookingStatus = "Confirmed";
 
-                    // Get payment method details if available
+                    // קבל פרטי אמצעי תשלום אם זמינים
                     if (!string.IsNullOrEmpty(intent.PaymentMethodId))
                     {
                         var paymentMethodService = new PaymentMethodService();
@@ -211,7 +211,6 @@ namespace ChabbyNb_API.Services
                             payment.LastFour = paymentMethod.Card.Last4;
                             payment.CardBrand = paymentMethod.Card.Brand;
                         }
-
                     }
                     _logger.LogInformation($"Payment {payment.PaymentID} confirmed successfully for booking {payment.BookingID}");
                 }
@@ -240,6 +239,7 @@ namespace ChabbyNb_API.Services
                 throw;
             }
         }
+
 
         /// <summary>
         /// Processes a refund for a payment.
