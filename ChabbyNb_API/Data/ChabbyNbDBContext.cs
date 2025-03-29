@@ -166,6 +166,42 @@ namespace ChabbyNb_API.Data
                 .WithMany()
                 .HasForeignKey(t => t.UserID)
                 .OnDelete(DeleteBehavior.Restrict);
+
+
+            modelBuilder.Entity<ChatConversation>()
+                .HasOne(c => c.User)
+                .WithMany()
+                .HasForeignKey(c => c.UserID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Configure ChatMessage relationships
+            modelBuilder.Entity<ChatMessage>()
+                .HasOne(m => m.Conversation)
+                .WithMany(c => c.Messages)
+                .HasForeignKey(m => m.ConversationID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ChatMessage>()
+                .HasOne(m => m.Sender)
+                .WithMany()
+                .HasForeignKey(m => m.SenderID)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ChatMessage>()
+                .HasOne(m => m.Template)
+                .WithMany()
+                .HasForeignKey(m => m.TemplateID)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Configure ContactMessage relationship
+            modelBuilder.Entity<ContactMessage>()
+                .HasOne(c => c.User)
+                .WithMany()
+                .HasForeignKey(c => c.UserID)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

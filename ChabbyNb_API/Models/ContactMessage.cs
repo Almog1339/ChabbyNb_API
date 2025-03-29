@@ -5,6 +5,7 @@ namespace ChabbyNb_API.Models
 {
     public class ContactMessage
     {
+        [Key]
         public int ContactMessageID { get; set; }
 
         [Required]

@@ -103,13 +103,14 @@ namespace ChabbyNb_API.Models.DTOs
         public decimal BasePrice { get; set; }
         public decimal DiscountAmount { get; set; }
         public decimal TotalPrice { get; set; }
-        public decimal RefundAmount { get; set; }
         public string CancellationPolicy { get; set; }
+
         [Required]
         public string CancellationReason { get; set; }
 
         public bool FullRefund { get; set; } = true;
 
+        // Only one RefundAmount property
         public decimal? RefundAmount { get; set; }
     }
 

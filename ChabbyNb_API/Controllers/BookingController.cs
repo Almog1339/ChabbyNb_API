@@ -22,15 +22,17 @@ namespace ChabbyNb_API.Controllers
     {
         private readonly ChabbyNbDbContext _context;
         private readonly PriceCalculationService _priceService;
-        private readonly IPaymentService _paymentService = new IPaymentService();
+        private readonly IPaymentService _paymentService;
         private readonly IConfiguration _configuration;
+        private readonly IEmailService _emailService;
 
-        public BookingsController(ChabbyNbDbContext context, IPaymentService paymentService, IConfiguration configuration)
+        public BookingsController(ChabbyNbDbContext context, IPaymentService paymentService, IConfiguration configuration, IEmailService emailService)
         {
             _context = context;
             _priceService = new PriceCalculationService(context);
             _paymentService = paymentService;
             _configuration = configuration;
+            _emailService = emailService;
         }
 
         // GET: api/Bookings
@@ -82,7 +84,7 @@ namespace ChabbyNb_API.Controllers
                 .Where(b =>
                     b.UserID == userId &&
                     b.CheckInDate >= DateTime.Today &&
-                    (b.BookingStatus == "Confirmed" || b.BookingStatus == "Pending"))
+                    (b.BookingStatus == "Confirmed" || b.BookingStatus == "Pending") || b.BookingStatus == "Canceled")
                 .OrderBy(b => b.CheckInDate)
                 .ToListAsync();
 
@@ -107,8 +109,6 @@ namespace ChabbyNb_API.Controllers
             return bookings;
         }
 
-        // POST: api/Bookings
-        [HttpPost]
         // POST: api/Bookings
         [HttpPost]
         public async Task<ActionResult<BookingResponseDto>> CreateBooking([FromBody] BookingCreateDto bookingDto)
@@ -485,99 +485,25 @@ namespace ChabbyNb_API.Controllers
         private async Task SendBookingConfirmationEmail(Booking booking)
         {
             // Get SMTP settings from configuration
-            var smtpSettings = _configuration.GetSection("SmtpSettings");
-
-            // Check if we should send real emails
-            if (!_configuration.GetValue<bool>("SendRealEmails", false))
+            var model = new
             {
-                // For development, just log the email
-                Console.WriteLine($"Confirmation email would be sent to: {booking.User.Email}");
-                Console.WriteLine($"Subject: Your ChabbyNb Booking Confirmation");
-                Console.WriteLine($"Booking: {booking.ReservationNumber} for {booking.Apartment.Title}");
-                return;
-            }
+                GuestName = booking.User.FirstName ?? booking.User.Username,
+                ReservationNumber = booking.ReservationNumber,
+                ApartmentTitle = booking.Apartment.Title,
+                Address = booking.Apartment.Address,
+                Neighborhood = booking.Apartment.Neighborhood,
+                CheckInDate = booking.CheckInDate.ToShortDateString(),
+                CheckOutDate = booking.CheckOutDate.ToShortDateString(),
+                GuestCount = booking.GuestCount.ToString(),
+                TotalPrice = booking.TotalPrice.ToString("F2")
+            };
 
-            // Prepare email message
-            string subject = "Your ChabbyNb Booking Confirmation";
-            string body = $@"
-        <html>
-        <head>
-            <style>
-                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                .header {{ background-color: #ff5a5f; padding: 20px; color: white; text-align: center; }}
-                .content {{ padding: 20px; }}
-                .booking-details {{ background-color: #f8f8f8; padding: 15px; margin: 20px 0; border-radius: 5px; }}
-                .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #666; }}
-            </style>
-        </head>
-        <body>
-            <div class='container'>
-                <div class='header'>
-                    <h1>Booking Confirmation</h1>
-                </div>
-                <div class='content'>
-                    <p>Dear {booking.User.FirstName ?? booking.User.Username},</p>
-                    <p>Thank you for booking with ChabbyNb! Your reservation has been confirmed.</p>
-                    
-                    <div class='booking-details'>
-                        <h3>Booking Details:</h3>
-                        <p><strong>Reservation Number:</strong> {booking.ReservationNumber}</p>
-                        <p><strong>Property:</strong> {booking.Apartment.Title}</p>
-                        <p><strong>Address:</strong> {booking.Apartment.Address}, {booking.Apartment.Neighborhood}</p>
-                        <p><strong>Check-in Date:</strong> {booking.CheckInDate.ToShortDateString()}</p>
-                        <p><strong>Check-out Date:</strong> {booking.CheckOutDate.ToShortDateString()}</p>
-                        <p><strong>Guests:</strong> {booking.GuestCount}</p>
-                        <p><strong>Total Amount Paid:</strong> ${booking.TotalPrice}</p>
-                    </div>
-                    
-                    <p>You can view your booking details at any time by logging into your ChabbyNb account.</p>
-                    
-                    <p>We hope you enjoy your stay! If you have any questions or need assistance, please don't hesitate to contact us.</p>
-                    
-                    <p>Best regards,<br>The ChabbyNb Team</p>
-                </div>
-                <div class='footer'>
-                    <p>© 2025 ChabbyNb. All rights reserved.</p>
-                    <p>25 Adrianou St, Athens, Greece</p>
-                </div>
-            </div>
-        </body>
-        </html>";
-
-            // Configure and send email
-            using (var client = new SmtpClient())
-            {
-                // Set up the SMTP client
-                client.Host = smtpSettings["Host"];
-                client.Port = int.Parse(smtpSettings["Port"] ?? "587");
-                client.EnableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
-                client.DeliveryMethod = SmtpDeliveryMethod.Network;
-                client.UseDefaultCredentials = false;
-
-                // Make sure credentials are correctly set
-                string username = smtpSettings["Username"];
-                string password = smtpSettings["Password"];
-
-                if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
-                {
-                    throw new InvalidOperationException("SMTP username or password is not configured.");
-                }
-
-                client.Credentials = new NetworkCredential(username, password);
-
-                // Create the email message
-                using (var message = new MailMessage())
-                {
-                    message.From = new MailAddress(smtpSettings["FromEmail"], "ChabbyNb");
-                    message.Subject = subject;
-                    message.Body = body;
-                    message.IsBodyHtml = true;
-                    message.To.Add(new MailAddress(booking.User.Email));
-
-                    await client.SendMailAsync(message);
-                }
-            }
+            await _emailService.SendEmailAsync(
+                booking.User.Email,
+                "Your ChabbyNb Booking Confirmation",
+                "BookingConfirmation",
+                model
+            );
         }
     }
 }

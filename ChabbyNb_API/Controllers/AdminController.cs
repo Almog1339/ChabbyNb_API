@@ -30,13 +30,17 @@ namespace ChabbyNb_API.Controllers
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly ILogger<AdminController> _logger;
         private readonly IConfiguration _configuration;
+        private readonly IEmailService _emailService;
+        private readonly IPaymentService _paymentService;
 
-        public AdminController(ChabbyNbDbContext context, IWebHostEnvironment webHostEnvironment, ILogger<AdminController> logger, IConfiguration configuration)
+        public AdminController(ChabbyNbDbContext context,IWebHostEnvironment webHostEnvironment,ILogger<AdminController> logger,IConfiguration configuration,IEmailService emailService,IPaymentService paymentService)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;
             _logger = logger;
             _configuration = configuration;
+            _emailService = emailService;
+            _paymentService = paymentService;
         }
 
         // GET: api/Admin/Dashboard
@@ -587,100 +591,22 @@ namespace ChabbyNb_API.Controllers
         // Helper method to send cancellation email
         private async Task SendBookingCancellationEmail(Booking booking, string reason)
         {
-            // Get SMTP settings from configuration
-            var smtpSettings = _configuration.GetSection("SmtpSettings");
-
-            // Check if we should send real emails
-            if (!_configuration.GetValue<bool>("SendRealEmails", false))
+            var model = new
             {
-                // For development, just log the email
-                Console.WriteLine($"Cancellation email would be sent to: {booking.User.Email}");
-                Console.WriteLine($"Subject: Your ChabbyNb Booking Has Been Canceled");
-                Console.WriteLine($"Booking: {booking.ReservationNumber} for {booking.Apartment.Title}");
-                Console.WriteLine($"Reason: {reason}");
-                return;
-            }
+                GuestName = booking.User.FirstName ?? booking.User.Username,
+                ReservationNumber = booking.ReservationNumber,
+                ApartmentTitle = booking.Apartment.Title,
+                CheckInDate = booking.CheckInDate.ToShortDateString(),
+                CheckOutDate = booking.CheckOutDate.ToShortDateString(),
+                CancellationReason = reason
+            };
 
-            // Prepare email message
-            string subject = "Your ChabbyNb Booking Has Been Canceled";
-            string body = $@"
-        <html>
-        <head>
-            <style>
-                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                .header {{ background-color: #ff5a5f; padding: 20px; color: white; text-align: center; }}
-                .content {{ padding: 20px; }}
-                .booking-details {{ background-color: #f8f8f8; padding: 15px; margin: 20px 0; border-radius: 5px; }}
-                .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #666; }}
-            </style>
-        </head>
-        <body>
-            <div class='container'>
-                <div class='header'>
-                    <h1>Booking Cancellation</h1>
-                </div>
-                <div class='content'>
-                    <p>Dear {booking.User.FirstName ?? booking.User.Username},</p>
-                    <p>We regret to inform you that your booking with ChabbyNb has been canceled.</p>
-                    
-                    <div class='booking-details'>
-                        <h3>Booking Details:</h3>
-                        <p><strong>Reservation Number:</strong> {booking.ReservationNumber}</p>
-                        <p><strong>Property:</strong> {booking.Apartment.Title}</p>
-                        <p><strong>Check-in Date:</strong> {booking.CheckInDate.ToShortDateString()}</p>
-                        <p><strong>Check-out Date:</strong> {booking.CheckOutDate.ToShortDateString()}</p>
-                    </div>
-                    
-                    <p><strong>Reason for cancellation:</strong> {reason}</p>
-                    
-                    <p>If your booking was already paid for, a refund will be processed according to our cancellation policy. Please allow 5-10 business days for the refund to appear in your account.</p>
-                    
-                    <p>We sincerely apologize for any inconvenience this may cause. If you have any questions or need assistance finding alternative accommodations, please don't hesitate to contact us.</p>
-                    
-                    <p>Best regards,<br>The ChabbyNb Team</p>
-                </div>
-                <div class='footer'>
-                    <p>© 2025 ChabbyNb. All rights reserved.</p>
-                    <p>25 Adrianou St, Athens, Greece</p>
-                </div>
-            </div>
-        </body>
-        </html>";
-
-            // Configure and send email
-            using (var client = new SmtpClient())
-            {
-                // Set up the SMTP client
-                client.Host = smtpSettings["Host"];
-                client.Port = int.Parse(smtpSettings["Port"] ?? "587");
-                client.EnableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
-                client.DeliveryMethod = SmtpDeliveryMethod.Network;
-                client.UseDefaultCredentials = false;
-
-                // Make sure credentials are correctly set
-                string username = smtpSettings["Username"];
-                string password = smtpSettings["Password"];
-
-                if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
-                {
-                    throw new InvalidOperationException("SMTP username or password is not configured.");
-                }
-
-                client.Credentials = new NetworkCredential(username, password);
-
-                // Create the email message
-                using (var message = new MailMessage())
-                {
-                    message.From = new MailAddress(smtpSettings["FromEmail"], "ChabbyNb");
-                    message.Subject = subject;
-                    message.Body = body;
-                    message.IsBodyHtml = true;
-                    message.To.Add(new MailAddress(booking.User.Email));
-
-                    await client.SendMailAsync(message);
-                }
-            }
+            await _emailService.SendEmailAsync(
+                booking.User.Email,
+                "Your ChabbyNb Booking Has Been Canceled",
+                "BookingCancellation",
+                model
+            );
         }
 
     }

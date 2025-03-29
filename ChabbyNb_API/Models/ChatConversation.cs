@@ -1,10 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
 
 namespace ChabbyNb_API.Models
 {
     public class ChatConversation
     {
+        [Key]
         public int ConversationID { get; set; }
 
         public int UserID { get; set; }
@@ -32,6 +34,7 @@ namespace ChabbyNb_API.Models
 
     public class ChatMessage
     {
+        [Key]
         public int MessageID { get; set; }
 
         public int ConversationID { get; set; }
@@ -67,6 +70,7 @@ namespace ChabbyNb_API.Models
 
     public class MessageTemplate
     {
+        [Key]
         public int TemplateID { get; set; }
 
         [Required]

@@ -6,6 +6,8 @@ using System.Net.Mail;
 using System.Net;
 using System.Security.Claims;
 using ChabbyNb_API.Models.DTOs;
+using Microsoft.EntityFrameworkCore;
+using ChabbyNb_API.Services;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -16,17 +18,17 @@ public class ChatsController : ControllerBase
     private readonly IWebHostEnvironment _webHostEnvironment;
     private readonly IConfiguration _configuration;
     private readonly ILogger<ChatsController> _logger;
+    private readonly IFileService _fileService;
+    private readonly IEmailService _emailService;
 
-    public ChatsController(
-        ChabbyNbDbContext context,
-        IWebHostEnvironment webHostEnvironment,
-        IConfiguration configuration,
-        ILogger<ChatsController> logger)
+    public ChatsController(ChabbyNbDbContext context,IWebHostEnvironment webHostEnvironment,IConfiguration configuration,ILogger<ChatsController> logger,IFileService fileService,IEmailService emailService)
     {
         _context = context;
         _webHostEnvironment = webHostEnvironment;
         _configuration = configuration;
         _logger = logger;
+        _fileService = fileService;
+        _emailService = emailService;
     }
 
     // GET: api/Chats - Get all user conversations
@@ -276,14 +278,14 @@ public class ChatsController : ControllerBase
         if (dto.MediaFile != null && dto.MediaFile.Length > 0)
         {
             // Validate file (type, size, etc.)
-            if (!IsValidMediaFile(dto.MediaFile))
+            if (!_fileService.IsValidMediaFile(dto.MediaFile))
             {
                 return BadRequest(new { error = "Invalid file. Only images (jpg, png, gif) and videos (mp4) under 10MB are allowed." });
             }
 
-            // Save the file
-            mediaUrl = await SaveMediaFile(dto.MediaFile);
-            contentType = GetContentType(dto.MediaFile);
+            // Save the file using the file service
+            mediaUrl = await _fileService.SaveMediaFileAsync(dto.MediaFile, "uploads/chat/" + _fileService.GetContentType(dto.MediaFile) + "s");
+            contentType = _fileService.GetContentType(dto.MediaFile);
         }
 
         // Create message
@@ -601,11 +603,17 @@ public class ChatsController : ControllerBase
         return "image";
     }
 
+    // Update the method to use the email service
     private async Task SendChatNotificationEmail(ChatConversation conversation, ChatMessage message)
     {
-        // Get recipient information
+        // Determine recipient information
         string recipientEmail;
         string recipientName;
+
+        // Get sender information
+        string senderName = message.SenderID.HasValue
+            ? $"{conversation.User.FirstName} {conversation.User.LastName}".Trim()
+            : "Admin";
 
         if (message.SenderID.HasValue)
         {
@@ -625,27 +633,8 @@ public class ChatsController : ControllerBase
             recipientName = conversation.User.FirstName ?? conversation.User.Username;
         }
 
-        // Get sender information
-        string senderName = message.SenderID.HasValue
-            ? $"{conversation.User.FirstName} {conversation.User.LastName}".Trim()
-            : "Admin";
-
-        // Get SMTP settings from configuration
-        var smtpSettings = _configuration.GetSection("SmtpSettings");
-
-        // Check if we should send real emails
-        if (!_configuration.GetValue<bool>("SendRealEmails", false))
-        {
-            // For development, just log the email
-            Console.WriteLine($"Chat notification email would be sent to: {recipientEmail}");
-            Console.WriteLine($"Subject: New message from {senderName}");
-            Console.WriteLine($"Message preview: {(message.Content.Length > 50 ? message.Content.Substring(0, 50) + "..." : message.Content)}");
-            return;
-        }
-
-        // Prepare email content based on message type
+        // Prepare message preview based on content type
         string messagePreview;
-
         if (message.ContentType == "text")
         {
             messagePreview = message.Content.Length > 200
@@ -657,85 +646,25 @@ public class ChatsController : ControllerBase
             messagePreview = $"[{message.ContentType.ToUpper()}] {(message.Content.Length > 100 ? message.Content.Substring(0, 100) + "..." : message.Content)}";
         }
 
-        // Prepare email message
-        string subject = $"New message from {senderName}";
-        string body = $@"
-            <html>
-            <head>
-                <style>
-                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                    .header {{ background-color: #ff5a5f; padding: 20px; color: white; text-align: center; }}
-                    .content {{ padding: 20px; }}
-                    .message-preview {{ background-color: #f8f8f8; padding: 15px; margin: 20px 0; border-radius: 5px; }}
-                    .button {{ display: inline-block; background-color: #ff5a5f; color: white; padding: 10px 20px; 
-                            text-decoration: none; border-radius: 5px; margin-top: 20px; }}
-                    .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #666; }}
-                </style>
-            </head>
-            <body>
-                <div class='container'>
-                    <div class='header'>
-                        <h1>New Message</h1>
-                    </div>
-                    <div class='content'>
-                        <p>Dear {recipientName},</p>
-                        <p>You have received a new message from {senderName} in conversation: <strong>{conversation.Title}</strong></p>
-                        
-                        <div class='message-preview'>
-                            <p>{messagePreview}</p>
-                            {(message.ContentType != "text" ? "<p><em>This message contains media that can be viewed in the app.</em></p>" : "")}
-                        </div>
-                        
-                        <p>Please log in to your account to view the full message and reply.</p>
-                        
-                        <p style='text-align: center;'>
-                            <a href='{_configuration["WebsiteUrl"]}/messages/{conversation.ConversationID}' class='button'>View Message</a>
-                        </p>
-                        
-                        <p>Best regards,<br>The ChabbyNb Team</p>
-                    </div>
-                    <div class='footer'>
-                        <p>© 2025 ChabbyNb. All rights reserved.</p>
-                        <p>25 Adrianou St, Athens, Greece</p>
-                    </div>
-                </div>
-            </body>
-            </html>";
-
-        // Configure and send email
-        using (var client = new SmtpClient())
+        // Create model for the email template
+        var model = new
         {
-            // Set up the SMTP client
-            client.Host = smtpSettings["Host"];
-            client.Port = int.Parse(smtpSettings["Port"] ?? "587");
-            client.EnableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
-            client.DeliveryMethod = SmtpDeliveryMethod.Network;
-            client.UseDefaultCredentials = false;
+            RecipientName = recipientName,
+            SenderName = senderName,
+            ConversationTitle = conversation.Title,
+            MessagePreview = messagePreview,
+            HasMedia = message.ContentType != "text",
+            ConversationID = conversation.ConversationID.ToString(),
+            WebsiteUrl = _configuration["WebsiteUrl"]
+        };
 
-            // Make sure credentials are correctly set
-            string username = smtpSettings["Username"];
-            string password = smtpSettings["Password"];
-
-            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
-            {
-                throw new InvalidOperationException("SMTP username or password is not configured.");
-            }
-
-            client.Credentials = new NetworkCredential(username, password);
-
-            // Create the email message
-            using (var emailMessage = new MailMessage())
-            {
-                emailMessage.From = new MailAddress(smtpSettings["FromEmail"], "ChabbyNb Messaging");
-                emailMessage.Subject = subject;
-                emailMessage.Body = body;
-                emailMessage.IsBodyHtml = true;
-                emailMessage.To.Add(new MailAddress(recipientEmail, recipientName));
-
-                await client.SendMailAsync(emailMessage);
-            }
-        }
+        // Send the email using the email service
+        await _emailService.SendEmailAsync(
+            recipientEmail,
+            $"New message from {senderName}",
+            "ChatNotification",
+            model
+        );
     }
 
     #endregion

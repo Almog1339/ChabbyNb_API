@@ -287,7 +287,6 @@ C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\staticwebassets\msbuild.buildMultiTargeting.ChabbyNb_API.props
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\staticwebassets\msbuild.buildTransitive.ChabbyNb_API.props
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\staticwebassets.pack.json
-C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\ChabbyNb.DC7212DE.Up2Date
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\ChabbyNb_API.dll
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\refint\ChabbyNb_API.dll
@@ -299,3 +298,4 @@ C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net8.0\ChabbyNb_API.staticwebassets.runtime.json
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net8.0\Newtonsoft.Json.dll
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net8.0\Stripe.net.dll
+C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt

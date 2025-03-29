@@ -1,0 +1,74 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background-color: #ff5a5f;
+            padding: 20px;
+            color: white;
+            text-align: center;
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        .booking-details {
+            background-color: #f8f8f8;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1>Booking Cancellation</h1>
+        </div>
+        <div class='content'>
+            <p>Dear {{$GuestName$}},</p>
+            <p>We regret to inform you that your booking with ChabbyNb has been canceled.</p>
+
+            <div class='booking-details'>
+                <h3>Booking Details:</h3>
+                <p><strong>Reservation Number:</strong> {{$ReservationNumber$}}</p>
+                <p><strong>Property:</strong> {{$ApartmentTitle$}}</p>
+                <p><strong>Check-in Date:</strong> {{$CheckInDate$}}</p>
+                <p><strong>Check-out Date:</strong> {{$CheckOutDate$}}</p>
+            </div>
+
+            <p><strong>Reason for cancellation:</strong> {{$CancellationReason$}}</p>
+
+            <p>If your booking was already paid for, a refund will be processed according to our cancellation policy. Please allow 5-10 business days for the refund to appear in your account.</p>
+
+            <p>We sincerely apologize for any inconvenience this may cause. If you have any questions or need assistance finding alternative accommodations, please don't hesitate to contact us.</p>
+
+            <p>Best regards,<br>The ChabbyNb Team</p>
+        </div>
+        <div class='footer'>
+            <p>© 2025 ChabbyNb. All rights reserved.</p>
+            <p>25 Adrianou St, Athens, Greece</p>
+        </div>
+    </div>
+</body>
+</html>

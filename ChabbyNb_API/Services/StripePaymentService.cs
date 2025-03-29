@@ -130,6 +130,9 @@ namespace ChabbyNb_API.Services
                     Amount = booking.TotalPrice,
                     Currency = _defaultCurrency,
                     Status = intent.Status,
+                    PaymentMethod = string.IsNullOrEmpty(intent.PaymentMethodId) ? "Pending" : intent.PaymentMethodId,
+                    LastFour = null, // This can be null
+                    CardBrand = null, // This can be null
                     CreatedDate = DateTime.UtcNow
                 };
 

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Net.Mail;
 using System.Net;
 using ChabbyNb_API.Models.DTOs;
+using Microsoft.EntityFrameworkCore;
 
 [ApiController]
 [Route("api/[controller]")]

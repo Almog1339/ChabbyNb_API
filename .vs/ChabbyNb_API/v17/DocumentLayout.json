@@ -3,64 +3,24 @@
   "WorkspaceRootPath": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\controllers\\chatscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\controllers\\chatscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\models\\dtos\\conversationdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\models\\dtos\\conversationdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\data\\chabbynbdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\data\\chabbynbdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\models\\chatconversation.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\models\\chatconversation.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\controllers\\contactmessagecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\controllers\\contactmessagecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\models\\dtos\\contactmessagedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\models\\dtos\\contactmessagedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\controllers\\homecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\controllers\\homecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\models\\contactmessage.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\models\\contactmessage.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\models\\dtos\\bookingdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\models\\dtos\\bookingdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\services\\stripepaymentservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\services\\stripepaymentservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\controllers\\bookingcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\controllers\\bookingcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\controllers\\admincontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\controllers\\admincontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\models\\payment.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\models\\payment.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\controllers\\memberscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\controllers\\memberscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\data\\chabbynbdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\data\\chabbynbdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\controllers\\financecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\controllers\\financecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\models\\booking.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\models\\booking.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\models\\dtos\\seasonalpricingdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\models\\dtos\\seasonalpricingdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\models\\dtos\\contactmessagedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\models\\dtos\\contactmessagedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -74,46 +34,59 @@
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "ConversationDto.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\DTOs\\ConversationDto.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Models\\DTOs\\ConversationDto.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\DTOs\\ConversationDto.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Models\\DTOs\\ConversationDto.cs",
-              "ViewState": "AgIAAEIAAAAAAAAAAAAxwHMAAAABAAAAAAAAAA==",
+              "DocumentIndex": 2,
+              "Title": "Payment.cs",
+              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\Payment.cs",
+              "RelativeDocumentMoniker": "ChabbyNb_API\\Models\\Payment.cs",
+              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\Payment.cs",
+              "RelativeToolTip": "ChabbyNb_API\\Models\\Payment.cs",
+              "ViewState": "AgIAAA8AAAAAAAAAAAAowCQAAAA6AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-29T08:08:17.287Z",
+              "WhenOpened": "2025-03-29T11:05:08.09Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "ChatsController.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\ChatsController.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Controllers\\ChatsController.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\ChatsController.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Controllers\\ChatsController.cs",
-              "ViewState": "AgIAAJoBAAAAAAAAAAAawBQAAAAiAAAAAAAAAA==",
+              "Title": "StripePaymentService.cs",
+              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Services\\StripePaymentService.cs",
+              "RelativeDocumentMoniker": "ChabbyNb_API\\Services\\StripePaymentService.cs",
+              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Services\\StripePaymentService.cs*",
+              "RelativeToolTip": "ChabbyNb_API\\Services\\StripePaymentService.cs*",
+              "ViewState": "AgIAAGUAAAAAAAAAAAAqwIcAAAAxAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-29T08:07:38.016Z",
+              "WhenOpened": "2025-03-29T10:27:08.15Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "BookingController.cs",
+              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\BookingController.cs",
+              "RelativeDocumentMoniker": "ChabbyNb_API\\Controllers\\BookingController.cs",
+              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\BookingController.cs",
+              "RelativeToolTip": "ChabbyNb_API\\Controllers\\BookingController.cs",
+              "ViewState": "AgIAANQAAAAAAAAAAAAqwN8AAAAQAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-03-29T10:15:39.991Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 3,
-              "Title": "ChatConversation.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\ChatConversation.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Models\\ChatConversation.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\ChatConversation.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Models\\ChatConversation.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAFsAAAABAAAAAAAAAA==",
+              "Title": "ChabbyNbDBContext.cs",
+              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Data\\ChabbyNbDBContext.cs",
+              "RelativeDocumentMoniker": "ChabbyNb_API\\Data\\ChabbyNbDBContext.cs",
+              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Data\\ChabbyNbDBContext.cs",
+              "RelativeToolTip": "ChabbyNb_API\\Data\\ChabbyNbDBContext.cs",
+              "ViewState": "AgIAABUAAAAAAAAAAAAcwCEAAAAMAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-29T08:06:15.667Z",
+              "WhenOpened": "2025-03-29T08:00:39.106Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 4,
               "Title": "ContactMessageDto.cs",
               "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\DTOs\\ContactMessageDto.cs",
               "RelativeDocumentMoniker": "ChabbyNb_API\\Models\\DTOs\\ContactMessageDto.cs",
@@ -123,147 +96,6 @@
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-03-29T08:03:07.105Z",
               "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "ContactMessageController.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\ContactMessageController.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Controllers\\ContactMessageController.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\ContactMessageController.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Controllers\\ContactMessageController.cs",
-              "ViewState": "AgIAAJIAAAAAAAAAAAAIwK4AAAAJAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-29T08:02:27.201Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "ChabbyNbDBContext.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Data\\ChabbyNbDBContext.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Data\\ChabbyNbDBContext.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Data\\ChabbyNbDBContext.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Data\\ChabbyNbDBContext.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAB0AAABEAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-29T08:00:39.106Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "ContactMessage.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\ContactMessage.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Models\\ContactMessage.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\ContactMessage.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Models\\ContactMessage.cs",
-              "ViewState": "AgIAAAMAAAAAAAAAAAAAACkAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-29T08:00:13.193Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 8,
-              "Title": "BookingDto.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\DTOs\\BookingDto.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Models\\DTOs\\BookingDto.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\DTOs\\BookingDto.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Models\\DTOs\\BookingDto.cs",
-              "ViewState": "AgIAAF4AAAAAAAAAAAAzwHAAAAAyAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-29T07:56:49.615Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 10,
-              "Title": "AdminController.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\AdminController.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Controllers\\AdminController.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\AdminController.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Controllers\\AdminController.cs",
-              "ViewState": "AgIAACACAAAAAAAAAAAAAB8CAAARAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-29T07:45:34.74Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 11,
-              "Title": "MembersController.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\MembersController.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Controllers\\MembersController.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\MembersController.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Controllers\\MembersController.cs",
-              "ViewState": "AgIAAGcBAAAAAAAAAAAswAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-29T07:43:18.281Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "HomeController.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\HomeController.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Controllers\\HomeController.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\HomeController.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Controllers\\HomeController.cs",
-              "ViewState": "AgIAADIAAAAAAAAAAAAswPUAAAAJAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-29T07:39:49.638Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 9,
-              "Title": "BookingController.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\BookingController.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Controllers\\BookingController.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\BookingController.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Controllers\\BookingController.cs",
-              "ViewState": "AgIAAHUBAAAAAAAAAAD4v5IBAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-29T07:26:15.434Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 12,
-              "Title": "FinanceController.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\FinanceController.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Controllers\\FinanceController.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Controllers\\FinanceController.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Controllers\\FinanceController.cs",
-              "ViewState": "AgIAABkAAAAAAAAAAAAgwDoBAABPAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-28T15:36:08.417Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 13,
-              "Title": "Booking.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\Booking.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Models\\Booking.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\Booking.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Models\\Booking.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAAIAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-28T14:12:22.859Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 14,
-              "Title": "SeasonalPricingDto.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\DTOs\\SeasonalPricingDto.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Models\\DTOs\\SeasonalPricingDto.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\DTOs\\SeasonalPricingDto.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Models\\DTOs\\SeasonalPricingDto.cs",
-              "ViewState": "AgIAACEAAAAAAAAAAAAswF0AAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-28T11:14:32.33Z"
             }
           ]
         }

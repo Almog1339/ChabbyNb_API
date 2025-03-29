@@ -34,7 +34,7 @@ namespace ChabbyNb_API.Models
         public string LastFour { get; set; } // Last 4 digits of card
 
         [StringLength(50)]
-        public string CardBrand { get; set; } // "visa", "mastercard", etc.
+        public string CardBrand { get; set; } = "Unknown"; // "visa", "mastercard", etc.
 
         public DateTime CreatedDate { get; set; }
 
