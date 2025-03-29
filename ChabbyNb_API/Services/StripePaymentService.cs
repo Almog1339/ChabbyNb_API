@@ -139,7 +139,6 @@ namespace ChabbyNb_API.Services
                 _context.Payments.Add(payment);
 
                 // Update booking payment status
-                booking.PaymentStatus = "Pending";
                 _context.Entry(booking).State = EntityState.Modified;
 
                 await _context.SaveChangesAsync();
@@ -163,7 +162,7 @@ namespace ChabbyNb_API.Services
         /// </summary>
         /// <param name="paymentIntentId">The Stripe payment intent ID</param>
         /// <returns>The updated payment record</returns>
-        public async Task<Models.Payment> ConfirmPayment(string paymentIntentId)
+        public async Task<Payment> ConfirmPayment(string paymentIntentId)
         {
             if (string.IsNullOrEmpty(paymentIntentId))
             {
@@ -176,6 +175,7 @@ namespace ChabbyNb_API.Services
             {
                 // Retrieve the payment intent from Stripe
                 var service = new PaymentIntentService();
+                
                 var intent = await service.GetAsync(paymentIntentId);
 
                 // Find the payment in our database
@@ -211,8 +211,8 @@ namespace ChabbyNb_API.Services
                             payment.LastFour = paymentMethod.Card.Last4;
                             payment.CardBrand = paymentMethod.Card.Brand;
                         }
-                    }
 
+                    }
                     _logger.LogInformation($"Payment {payment.PaymentID} confirmed successfully for booking {payment.BookingID}");
                 }
                 else if (intent.Status == "canceled")
@@ -380,9 +380,6 @@ namespace ChabbyNb_API.Services
                 // Convert amount to smallest unit (cents, etc.)
                 long amountInSmallestUnit = ConvertToSmallestUnit(chargeDetails.Amount);
 
-                // Get or create the Stripe customer
-                string customerId = await GetOrCreateStripeCustomerId(booking.User);
-
                 // Create metadata for better tracking
                 var metadata = new Dictionary<string, string>
                 {
@@ -396,73 +393,86 @@ namespace ChabbyNb_API.Services
                     { "timestamp", DateTime.UtcNow.ToString("o") }
                 };
 
-                // Create payment intent in Stripe
-                var options = new PaymentIntentCreateOptions
-                {
-                    Amount = amountInSmallestUnit,
-                    Currency = _defaultCurrency,
-                    Customer = customerId,
-                    PaymentMethod = chargeDetails.PaymentMethodID,
-                    Confirm = true,  // Confirm the payment immediately
-                    OffSession = true,  // This is an off-session payment (admin initiated)
-                    Metadata = metadata,
-                    Description = $"Additional charge: {chargeDetails.Description} - Booking #{booking.ReservationNumber}",
-                    ReceiptEmail = booking.User.Email,
-                    StatementDescriptor = "ChabbyNb Charge",
-                    StatementDescriptorSuffix = "Extras"
-                };
-
-                var service = new PaymentIntentService();
-                var intent = await service.CreateAsync(options);
-
-                _logger.LogInformation($"Created Stripe payment intent {intent.Id} for manual charge");
-
-                // Create a payment record in our database
+                // Create a payment record in our database first
                 var payment = new Models.Payment
                 {
                     BookingID = booking.BookingID,
-                    PaymentIntentID = intent.Id,
                     Amount = chargeDetails.Amount,
                     Currency = _defaultCurrency,
-                    Status = intent.Status,
-                    PaymentMethod = intent.PaymentMethodId,
+                    Status = "pending", // Initial status is pending
+                    PaymentMethod = "card", // Default value
                     CreatedDate = DateTime.UtcNow
                 };
-
-                // If payment succeeded, update with additional details
-                if (intent.Status == "succeeded")
-                {
-                    payment.CompletedDate = DateTime.UtcNow;
-
-                    // Get payment method details if available
-                    if (!string.IsNullOrEmpty(intent.PaymentMethodId))
-                    {
-                        var paymentMethodService = new PaymentMethodService();
-                        var paymentMethod = await paymentMethodService.GetAsync(intent.PaymentMethodId);
-
-                        if (paymentMethod.Card != null)
-                        {
-                            payment.LastFour = paymentMethod.Card.Last4;
-                            payment.CardBrand = paymentMethod.Card.Brand;
-                        }
-                    }
-
-                    _logger.LogInformation($"Manual charge succeeded for booking {booking.BookingID}");
-                }
 
                 _context.Payments.Add(payment);
                 await _context.SaveChangesAsync();
 
-                return payment;
-            }
-            catch (StripeException ex)
-            {
-                _logger.LogError(ex, $"Stripe error processing manual charge for booking {chargeDetails.BookingID}: {ex.Message}");
-                throw new ApplicationException("Error processing charge with Stripe", ex);
+                try
+                {
+                    // Get or create the Stripe customer
+                    string customerId = await GetOrCreateStripeCustomerId(booking.User);
+
+                    // Create payment intent in Stripe
+                    var options = new PaymentIntentCreateOptions
+                    {
+                        Amount = amountInSmallestUnit,
+                        Currency = _defaultCurrency,
+                        Customer = customerId,
+                        PaymentMethod = chargeDetails.PaymentMethodID,
+                        Confirm = true,  // Confirm the payment immediately
+                        OffSession = true,  // This is an off-session payment (admin initiated)
+                        Metadata = metadata,
+                        Description = $"Additional charge: {chargeDetails.Description} - Booking #{booking.ReservationNumber}",
+                        ReceiptEmail = booking.User.Email,
+                        StatementDescriptor = "ChabbyNb Charge",
+                        StatementDescriptorSuffix = "Extras"
+                    };
+
+                    var service = new PaymentIntentService();
+                    var intent = await service.CreateAsync(options);
+
+                    _logger.LogInformation($"Created Stripe payment intent {intent.Id} for manual charge");
+
+                    // Update payment record with Stripe details
+                    payment.PaymentIntentID = intent.Id;
+                    payment.Status = intent.Status;
+                    payment.PaymentMethod = intent.PaymentMethodId ?? "card";
+
+                    // If payment succeeded, update with additional details
+                    if (intent.Status == "succeeded")
+                    {
+                        payment.CompletedDate = DateTime.UtcNow;
+
+                        // Get payment method details if available
+                        if (!string.IsNullOrEmpty(intent.PaymentMethodId))
+                        {
+                            var paymentMethodService = new PaymentMethodService();
+                            var paymentMethod = await paymentMethodService.GetAsync(intent.PaymentMethodId);
+
+                            if (paymentMethod.Card != null)
+                            {
+                                payment.LastFour = paymentMethod.Card.Last4;
+                                payment.CardBrand = paymentMethod.Card.Brand;
+                            }
+                        }
+                    }
+
+                    await _context.SaveChangesAsync();
+                    return payment;
+                }
+                catch (Exception ex)
+                {
+                    // If Stripe payment fails, update payment status
+                    payment.Status = "failed";
+                    await _context.SaveChangesAsync();
+
+                    _logger.LogError(ex, $"Stripe error processing manual charge: {ex.Message}");
+                    throw;
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error processing manual charge for booking {chargeDetails.BookingID}: {ex.Message}");
+                _logger.LogError(ex, $"Error processing manual charge: {ex.Message}");
                 throw;
             }
         }

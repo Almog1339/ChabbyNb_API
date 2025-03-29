@@ -10,7 +10,8 @@ using System.Security.Claims;
 using ChabbyNb_API.Data;  // The namespace containing your DbContext
 using ChabbyNb_API.Models;  // The namespace containing your model classes
 using ChabbyNb_API.Models.DTOs;  // The namespace containing your DTOs
-using ChabbyNb_API.Services;  // The namespace containing your services
+using ChabbyNb_API.Services;
+using Stripe;  // The namespace containing your services
 
 
 namespace ChabbyNb_API.Controllers
@@ -413,6 +414,8 @@ namespace ChabbyNb_API.Controllers
             try
             {
                 // Confirm the payment using the payment service
+                PaymentIntent intent = new PaymentIntent();
+                
                 var payment = await _paymentService.ConfirmPayment(confirmationDto.PaymentIntentId);
 
                 if (payment.Status == "succeeded")
