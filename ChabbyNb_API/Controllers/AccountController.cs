@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
@@ -12,12 +11,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Security.Cryptography;
 using System.Text;
-using System.Net.Mail;
-using System.Net;
 using ChabbyNb_API.Data;
 using ChabbyNb_API.Models;
 using ChabbyNb_API.Models.DTOs;
 using ChabbyNb_API.Services;
+using ChabbyNb_API.Services.Auth;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace ChabbyNb_API.Controllers
 {
@@ -28,16 +28,67 @@ namespace ChabbyNb_API.Controllers
         private readonly ChabbyNbDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly JwtTokenService _jwtTokenService;
+        private readonly IRoleService _roleService;
+        private readonly IAccountLockoutService _lockoutService;
+        private readonly IEmailService _emailService;
+        private readonly ILogger<AccountController> _logger;
 
         public AccountController(
             ChabbyNbDbContext context,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            JwtTokenService jwtTokenService,
+            IRoleService roleService,
+            IAccountLockoutService lockoutService,
+            IEmailService emailService,
+            ILogger<AccountController> logger)
         {
             _context = context;
             _configuration = configuration;
-            _jwtTokenService = new JwtTokenService(configuration);
+            _jwtTokenService = jwtTokenService;
+            _roleService = roleService;
+            _lockoutService = lockoutService;
+            _emailService = emailService;
+            _logger = logger;
         }
 
+        // Helper method to hash passwords
+        private string HashPassword(string password)
+        {
+            using (var sha256 = SHA256.Create())
+            {
+                var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+                var hash = BitConverter.ToString(hashedBytes).Replace("-", "").ToLower();
+                return hash;
+            }
+        }
+
+        // Helper method to get client IP address
+        private string GetClientIpAddress()
+        {
+            // Try to get the forwarded IP if behind a proxy
+            string ip = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+
+            // If no forwarded IP, use the remote IP
+            if (string.IsNullOrEmpty(ip))
+            {
+                ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            }
+
+            // If still no IP, use a default
+            if (string.IsNullOrEmpty(ip))
+            {
+                ip = "127.0.0.1";
+            }
+
+            // If multiple IPs (comma separated), take the first one
+            if (ip.Contains(","))
+            {
+                ip = ip.Split(',').First().Trim();
+            }
+
+            return ip;
+        }
+   
         // POST: api/Account/Login
         [HttpPost("Login")]
         public async Task<ActionResult<LoginResultDto>> Login([FromBody] LoginDto model)
@@ -53,7 +104,14 @@ namespace ChabbyNb_API.Controllers
                 return BadRequest(ModelState);
             }
 
+            // Check if account is locked out
+            if (await _lockoutService.IsAccountLockedOutAsync(model.Email))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { error = "This account is temporarily locked due to too many failed login attempts. Please try again later or contact support." });
+            }
+
             User user = null;
+            var ipAddress = GetClientIpAddress();
 
             // Check if user is trying to login with password
             if (!string.IsNullOrEmpty(model.Password))
@@ -64,7 +122,14 @@ namespace ChabbyNb_API.Controllers
                 // Check if user exists and credentials are valid
                 user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email && u.PasswordHash == hashedPassword);
 
-                if (user != null && !user.IsEmailVerified)
+                if (user == null)
+                {
+                    // Record failed login attempt
+                    await _lockoutService.RecordFailedLoginAttemptAsync(model.Email, ipAddress);
+                    return BadRequest(new { error = "Invalid login credentials." });
+                }
+
+                if (!user.IsEmailVerified)
                 {
                     return BadRequest(new { error = "Your email address has not been verified. Please check your email for verification link." });
                 }
@@ -79,16 +144,26 @@ namespace ChabbyNb_API.Controllers
                         b.ReservationNumber == model.ReservationNumber &&
                         b.User.Email == model.Email);
 
-                if (booking != null)
+                if (booking == null)
                 {
-                    user = booking.User;
+                    // Record failed login attempt
+                    await _lockoutService.RecordFailedLoginAttemptAsync(model.Email, ipAddress);
+                    return BadRequest(new { error = "Invalid reservation number or email address." });
                 }
+
+                user = booking.User;
             }
 
             if (user != null)
             {
-                // Generate JWT Token
-                string token = _jwtTokenService.GenerateJwtToken(user);
+                // Record successful login
+                await _lockoutService.RecordSuccessfulLoginAsync(user.UserID);
+
+                // Generate tokens (JWT + refresh token)
+                var tokenResult = await _jwtTokenService.GenerateTokensAsync(user);
+
+                // Get user roles
+                var roles = await _roleService.GetUserRolesAsync(user.UserID);
 
                 // For backward compatibility, still store some basic information in session
                 if (model.RememberMe)
@@ -102,608 +177,444 @@ namespace ChabbyNb_API.Controllers
                 return Ok(new LoginResultDto
                 {
                     Success = true,
-                    Token = token,
+                    Token = tokenResult.AccessToken,
+                    RefreshToken = tokenResult.RefreshToken,
+                    TokenExpiration = tokenResult.AccessTokenExpiration,
                     UserId = user.UserID,
                     Email = user.Email,
                     FirstName = user.FirstName,
                     LastName = user.LastName,
-                    IsAdmin = user.IsAdmin
+                    IsAdmin = user.IsAdmin,
+                    Roles = roles.Select(r => r.ToString()).ToList()
                 });
             }
             else
             {
+                // Record failed login attempt
+                await _lockoutService.RecordFailedLoginAttemptAsync(model.Email, ipAddress);
                 return BadRequest(new { error = "Invalid login attempt. Please check your credentials." });
             }
         }
 
-        // POST: api/Account/Register
-        [HttpPost("Register")]
-        public async Task<IActionResult> Register([FromBody] RegisterDto model)
+        // POST: api/Account/RefreshToken
+        [HttpPost("RefreshToken")]
+        public async Task<ActionResult<LoginResultDto>> RefreshToken([FromBody] RefreshTokenDto refreshRequest)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                // Check if email already exists
-                if (await _context.Users.AnyAsync(u => u.Email == model.Email))
-                {
-                    return BadRequest(new { error = "This email is already registered." });
-                }
-
-                // Create new user
-                var user = new User
-                {
-                    Email = model.Email,
-                    PasswordHash = HashPassword(model.Password),
-                    FirstName = model.FirstName,
-                    LastName = model.LastName,
-                    PhoneNumber = model.PhoneNumber,
-                    IsAdmin = false,
-                    CreatedDate = DateTime.Now,
-                    IsEmailVerified = false,
-                    Username = model.Username ?? model.Email.Split('@')[0] // Default username from email
-                };
-
-                _context.Users.Add(user);
-                await _context.SaveChangesAsync();
-
-                // Generate verification token and send email
-                if (await SendVerificationEmailAsync(user))
-                {
-                    return Ok(new { success = true, message = "Registration successful! Please check your email to verify your account before logging in." });
-                }
-                else
-                {
-                    _context.Users.Remove(user);
-                    await _context.SaveChangesAsync();
-                    return StatusCode(500, new { error = "Failed to send verification email. Please try again later." });
-                }
+                return BadRequest(ModelState);
             }
 
-            return BadRequest(ModelState);
-        }
-
-        // Method to send verification email
-        private async Task<bool> SendVerificationEmailAsync(User user)
-        {
             try
             {
-                // Generate a random token
-                string token = Guid.NewGuid().ToString();
+                var ipAddress = GetClientIpAddress();
 
-                // Create verification record
-                var verification = new EmailVerification
+                // Attempt to refresh the token
+                var tokenResult = await _jwtTokenService.RefreshTokenAsync(
+                    refreshRequest.RefreshToken,
+                    refreshRequest.AccessToken);
+
+                if (tokenResult == null)
                 {
-                    UserID = user.UserID,
+                    // Log invalid refresh attempt
+                    _logger.LogWarning($"Invalid refresh token attempt from IP {ipAddress}");
+                    return Unauthorized(new { error = "Invalid token" });
+                }
+
+                // Extract user ID from the new token
+                var handler = new JwtSecurityTokenHandler();
+                var jwtToken = handler.ReadJwtToken(tokenResult.AccessToken);
+                var userIdClaim = jwtToken.Claims.First(claim => claim.Type == ClaimTypes.NameIdentifier).Value;
+
+                if (!int.TryParse(userIdClaim, out int userId))
+                {
+                    return Unauthorized(new { error = "Invalid token format" });
+                }
+
+                // Get user information
+                var user = await _context.Users.FindAsync(userId);
+                if (user == null)
+                {
+                    return Unauthorized(new { error = "User not found" });
+                }
+
+                // Get user roles
+                var roles = await _roleService.GetUserRolesAsync(userId);
+
+                return Ok(new LoginResultDto
+                {
+                    Success = true,
+                    Token = tokenResult.AccessToken,
+                    RefreshToken = tokenResult.RefreshToken,
+                    TokenExpiration = tokenResult.AccessTokenExpiration,
+                    UserId = user.UserID,
                     Email = user.Email,
-                    VerificationToken = token,
-                    ExpiryDate = DateTime.Now.AddDays(2), // Token valid for 2 days
-                    IsVerified = false,
-                    CreatedDate = DateTime.Now
-                };
-
-                _context.EmailVerifications.Add(verification);
-                await _context.SaveChangesAsync();
-
-                // Build verification link
-                string verificationLink = $"{Request.Scheme}://{Request.Host}/api/Account/VerifyEmail/{token}";
-
-                // Prepare email message
-                string subject = "Verify Your ChabbyNb Account";
-                string body = $@"
-                    <html>
-                    <head>
-                        <style>
-                            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-                            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                            .header {{ background-color: #ff5a5f; padding: 20px; color: white; text-align: center; }}
-                            .content {{ padding: 20px; }}
-                            .button {{ display: inline-block; background-color: #ff5a5f; color: white; padding: 10px 20px; 
-                                      text-decoration: none; border-radius: 5px; margin-top: 20px; }}
-                            .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #666; }}
-                        </style>
-                    </head>
-                    <body>
-                        <div class='container'>
-                            <div class='header'>
-                                <h1>Welcome to ChabbyNb!</h1>
-                            </div>
-                            <div class='content'>
-                                <p>Hello {user.FirstName},</p>
-                                <p>Thank you for registering with ChabbyNb. To complete your registration and verify your email address, please click the button below:</p>
-                                <p style='text-align: center;'>
-                                    <a href='{verificationLink}' class='button'>Verify Email Address</a>
-                                </p>
-                                <p>This link will expire in 48 hours.</p>
-                                <p>If you did not create an account, you can safely ignore this email.</p>
-                                <p>Best regards,<br>The ChabbyNb Team</p>
-                            </div>
-                            <div class='footer'>
-                                <p>© 2025 ChabbyNb. All rights reserved.</p>
-                                <p>25 Adrianou St, Athens, Greece</p>
-                            </div>
-                        </div>
-                    </body>
-                    </html>";
-
-                // Get SMTP settings from configuration
-                var smtpSettings = _configuration.GetSection("SmtpSettings");
-
-                // Check if we should send real emails
-                if (!_configuration.GetValue<bool>("SendRealEmails", false))
-                {
-                    // For development, just log the email
-                    Console.WriteLine($"Email would be sent to: {user.Email}");
-                    Console.WriteLine($"Subject: {subject}");
-                    Console.WriteLine($"Verification Link: {verificationLink}");
-                    return true;
-                }
-
-                // Configure and send email
-                using (var client = new SmtpClient())
-                {
-                    // Set up the SMTP client
-                    client.Host = smtpSettings["Host"];
-                    client.Port = int.Parse(smtpSettings["Port"] ?? "587");
-                    client.EnableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
-                    client.DeliveryMethod = SmtpDeliveryMethod.Network;
-                    client.UseDefaultCredentials = false;
-
-                    // Make sure credentials are correctly set
-                    string username = smtpSettings["Username"];
-                    string password = smtpSettings["Password"];
-
-                    if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
-                    {
-                        throw new InvalidOperationException("SMTP username or password is not configured.");
-                    }
-
-                    client.Credentials = new NetworkCredential(username, password);
-
-                    // Create the email message
-                    using (var message = new MailMessage())
-                    {
-                        message.From = new MailAddress(smtpSettings["FromEmail"], "ChabbyNb");
-                        message.Subject = subject;
-                        message.Body = body;
-                        message.IsBodyHtml = true;
-                        message.To.Add(new MailAddress(user.Email));
-
-                        try
-                        {
-                            await client.SendMailAsync(message);
-                            Console.WriteLine($"Email sent successfully to {user.Email}");
-                            return true;
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.Error.WriteLine($"Failed to send email: {ex.Message}");
-                            if (ex.InnerException != null)
-                            {
-                                Console.Error.WriteLine($"Inner exception: {ex.InnerException.Message}");
-                            }
-                            throw;
-                        }
-                    }
-                }
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    IsAdmin = user.IsAdmin,
+                    Roles = roles.Select(r => r.ToString()).ToList()
+                });
+            }
+            catch (SecurityTokenException ex)
+            {
+                _logger.LogWarning(ex, "Invalid token during refresh attempt");
+                return Unauthorized(new { error = "Invalid token" });
             }
             catch (Exception ex)
             {
-                // Log the exception
-                Console.Error.WriteLine("Error sending verification email: " + ex.Message);
-                if (ex.InnerException != null)
-                {
-                    Console.Error.WriteLine("Inner exception: " + ex.InnerException.Message);
-                }
-                return false;
+                _logger.LogError(ex, "Error during token refresh");
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while refreshing the token" });
             }
-        }
-
-        // GET: api/Account/VerifyEmail/{token}
-        [HttpGet("VerifyEmail/{token}")]
-        public async Task<IActionResult> VerifyEmail(string token)
-        {
-            if (string.IsNullOrEmpty(token))
-            {
-                return BadRequest(new { error = "Invalid token" });
-            }
-
-            var verification = await _context.EmailVerifications
-                .Include(ev => ev.User)
-                .FirstOrDefaultAsync(ev => ev.VerificationToken == token && !ev.IsVerified && ev.ExpiryDate > DateTime.Now);
-
-            if (verification != null)
-            {
-                // Update verification record
-                verification.IsVerified = true;
-                verification.VerifiedDate = DateTime.Now;
-
-                // Update user record
-                verification.User.IsEmailVerified = true;
-
-                await _context.SaveChangesAsync();
-
-                return Ok(new { success = true, message = "Your email has been successfully verified. You can now log in to your account." });
-            }
-
-            return BadRequest(new { error = "Invalid or expired verification link. Please request a new verification email." });
-        }
-
-        // POST: api/Account/ResendVerification
-        [HttpPost("ResendVerification")]
-        public async Task<IActionResult> ResendVerification([FromBody] ForgotPasswordDto model)
-        {
-            if (ModelState.IsValid)
-            {
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email && !u.IsEmailVerified);
-
-                if (user != null)
-                {
-                    // Send new verification email
-                    if (await SendVerificationEmailAsync(user))
-                    {
-                        return Ok(new { success = true, message = "A new verification email has been sent. Please check your inbox." });
-                    }
-                    else
-                    {
-                        return StatusCode(500, new { error = "Failed to send verification email. Please try again later." });
-                    }
-                }
-                else
-                {
-                    // Don't reveal that the email doesn't exist or is already verified
-                    return Ok(new { success = true, message = "If your email is registered and not verified, you will receive a new verification email shortly." });
-                }
-            }
-
-            return BadRequest(ModelState);
         }
 
         // POST: api/Account/Logout
         [HttpPost("Logout")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout([FromBody] LogoutDto model)
         {
-            // With JWT, we don't need to do anything server-side for logout
+            // With JWT, we don't need to do anything server-side for basic logout
             // The client should discard the token
 
-            // For backward compatibility, clear session
-            HttpContext.Session.Clear();
-
-            return Ok(new { success = true, message = "You have been logged out successfully." });
-        }
-
-        // POST: api/Account/ForgotPassword
-        [HttpPost("ForgotPassword")]
-        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto model)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
             try
             {
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
-
-                if (user != null)
+                // But we can revoke the refresh token for better security
+                if (!string.IsNullOrEmpty(model.RefreshToken))
                 {
-                    // Generate a random token
-                    string token = Guid.NewGuid().ToString("N").Substring(0, 20);
-
-                    // Check if there's an existing token for this user and delete it
-                    var existingTokens = await _context.Tempwds
-                        .Where(t => t.UserID == user.UserID && !t.IsUsed)
-                        .ToListAsync();
-
-                    if (existingTokens.Any())
-                    {
-                        _context.Tempwds.RemoveRange(existingTokens);
-                        await _context.SaveChangesAsync();
-                    }
-
-                    // Create a new temporary password reset record
-                    var tempwd = new Tempwd
-                    {
-                        UserID = user.UserID,
-                        Token = token,
-                        ExperationTime = DateTime.Now.AddHours(24), // Token valid for 24 hours
-                        IsUsed = false
-                    };
-
-                    try
-                    {
-                        // Add to context and save
-                        _context.Tempwds.Add(tempwd);
-                        await _context.SaveChangesAsync();
-
-                        // Build reset password link
-                        string resetLink = $"{Request.Scheme}://{Request.Host}/reset-password?token={token}&email={Uri.EscapeDataString(user.Email)}";
-
-                        // Prepare email message
-                        string subject = "Reset Your ChabbyNb Password";
-                        string body = $@"
-                    <html>
-                    <head>
-                        <style>
-                            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-                            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                            .header {{ background-color: #ff5a5f; padding: 20px; color: white; text-align: center; }}
-                            .content {{ padding: 20px; }}
-                            .button {{ display: inline-block; background-color: #ff5a5f; color: white; padding: 10px 20px; 
-                                      text-decoration: none; border-radius: 5px; margin-top: 20px; }}
-                            .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #666; }}
-                        </style>
-                    </head>
-                    <body>
-                        <div class='container'>
-                            <div class='header'>
-                                <h1>ChabbyNb Password Reset</h1>
-                            </div>
-                            <div class='content'>
-                                <p>Hello {user.FirstName ?? user.Username},</p>
-                                <p>We received a request to reset your password. To complete the process, please click the button below:</p>
-                                <p style='text-align: center;'>
-                                    <a href='{resetLink}' class='button'>Reset Password</a>
-                                </p>
-                                <p>This link will expire in 24 hours.</p>
-                                <p>If you did not request a password reset, you can safely ignore this email.</p>
-                                <p>Best regards,<br>The ChabbyNb Team</p>
-                            </div>
-                            <div class='footer'>
-                                <p>© 2025 ChabbyNb. All rights reserved.</p>
-                                <p>25 Adrianou St, Athens, Greece</p>
-                            </div>
-                        </div>
-                    </body>
-                    </html>";
-
-                        // Get SMTP settings from configuration
-                        var smtpSettings = _configuration.GetSection("SmtpSettings");
-
-                        // Check if we should send real emails
-                        if (!_configuration.GetValue<bool>("SendRealEmails", false))
-                        {
-                            // For development, just log the email
-                            Console.WriteLine($"Password reset email would be sent to: {user.Email}");
-                            Console.WriteLine($"Subject: {subject}");
-                            Console.WriteLine($"Reset Link: {resetLink}");
-                            return Ok(new { success = true, message = "If your email is registered in our system, you will receive password reset instructions shortly." });
-                        }
-
-                        try
-                        {
-                            // Configure and send email
-                            using (var client = new SmtpClient())
-                            {
-                                // Set up the SMTP client
-                                client.Host = smtpSettings["Host"];
-                                client.Port = int.Parse(smtpSettings["Port"] ?? "587");
-                                client.EnableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
-                                client.DeliveryMethod = SmtpDeliveryMethod.Network;
-                                client.UseDefaultCredentials = false;
-
-                                // Make sure credentials are correctly set
-                                string username = smtpSettings["Username"];
-                                string password = smtpSettings["Password"];
-
-                                if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
-                                {
-                                    throw new InvalidOperationException("SMTP username or password is not configured.");
-                                }
-
-                                client.Credentials = new NetworkCredential(username, password);
-
-                                // Create the email message
-                                using (var message = new MailMessage())
-                                {
-                                    message.From = new MailAddress(smtpSettings["FromEmail"], "ChabbyNb");
-                                    message.Subject = subject;
-                                    message.Body = body;
-                                    message.IsBodyHtml = true;
-                                    message.To.Add(new MailAddress(user.Email));
-
-                                    await client.SendMailAsync(message);
-                                    Console.WriteLine($"Email sent successfully to {user.Email}");
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            // Log the exception but don't reveal it to the user
-                            Console.Error.WriteLine($"Error sending password reset email: {ex.Message}");
-                            if (ex.InnerException != null)
-                            {
-                                Console.Error.WriteLine($"Inner exception: {ex.InnerException.Message}");
-                            }
-                        }
-                    }
-                    catch (DbUpdateException ex)
-                    {
-                        // Log the specific database error
-                        Console.Error.WriteLine($"Database error saving reset token: {ex.Message}");
-                        if (ex.InnerException != null)
-                        {
-                            Console.Error.WriteLine($"Inner exception: {ex.InnerException.Message}");
-                        }
-
-                        // Don't expose the error details to the user
-                        return StatusCode(500, new { error = "An error occurred while processing your request." });
-                    }
+                    await _jwtTokenService.RevokeTokenAsync(model.RefreshToken);
                 }
 
-                // Don't reveal that the user does not exist
-                return Ok(new { success = true, message = "If your email is registered in our system, you will receive password reset instructions shortly." });
+                // For backward compatibility, clear session
+                HttpContext.Session.Clear();
+
+                return Ok(new { success = true, message = "You have been logged out successfully." });
             }
             catch (Exception ex)
             {
-                // Log the general exception
-                Console.Error.WriteLine($"Error in ForgotPassword: {ex.Message}");
-                if (ex.InnerException != null)
-                {
-                    Console.Error.WriteLine($"Inner exception: {ex.InnerException.Message}");
-                }
-                return StatusCode(500, new { error = "An error occurred while processing your request." });
+                _logger.LogError(ex, "Error during logout");
+                return Ok(new { success = true, message = "You have been logged out successfully, but there was an error revoking your refresh token." });
             }
         }
 
-        // POST: api/Account/ResetPassword
-        [HttpPost("ResetPassword")]
-        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto model)
+        // POST: api/Account/RevokeAllTokens
+        [HttpPost("RevokeAllTokens")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> RevokeAllTokens()
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
             try
-            {
-                // Find the user by email
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
-                if (user == null)
-                {
-                    // Don't reveal that the user does not exist
-                    return BadRequest(new { error = "Invalid or expired password reset token." });
-                }
-
-                // Find the reset token
-                var tempwd = await _context.Tempwds.FirstOrDefaultAsync(t =>
-                    t.Token == model.Token &&
-                    t.UserID == user.UserID &&
-                    !t.IsUsed &&
-                    t.ExperationTime > DateTime.Now);
-
-                if (tempwd == null)
-                {
-                    return BadRequest(new { error = "Invalid or expired password reset token." });
-                }
-
-                // Reset the password
-                user.PasswordHash = HashPassword(model.Password);
-
-                // Mark the token as used
-                tempwd.IsUsed = true;
-
-                await _context.SaveChangesAsync();
-
-                return Ok(new { success = true, message = "Your password has been reset successfully. You can now log in with your new password." });
-            }
-            catch (Exception ex)
-            {
-                // Log the exception
-                Console.Error.WriteLine($"Error in ResetPassword: {ex.Message}");
-                if (ex.InnerException != null)
-                {
-                    Console.Error.WriteLine($"Inner exception: {ex.InnerException.Message}");
-                }
-                return StatusCode(500, new { error = "An error occurred while processing your request." });
-            }
-        }
-
-        // POST: api/Account/ChangePassword
-        [HttpPost("ChangePassword")]
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto model)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            string hashedCurrentPassword = HashPassword(model.CurrentPassword);
-
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == userId && u.PasswordHash == hashedCurrentPassword);
-
-            if (user == null)
-            {
-                return BadRequest(new { error = "Current password is incorrect." });
-            }
-
-            // Update the password
-            user.PasswordHash = HashPassword(model.NewPassword);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { success = true, message = "Your password has been changed successfully." });
-        }
-
-        // GET: api/Account/Profile
-        [HttpGet("Profile")]
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        public async Task<ActionResult<ProfileDto>> GetProfile()
-        {
-            int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == userId);
-
-            if (user == null)
-            {
-                return NotFound(new { error = "User not found" });
-            }
-
-            var profile = new ProfileDto
-            {
-                Username = user.Username,
-                Email = user.Email,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                PhoneNumber = user.PhoneNumber
-            };
-
-            return profile;
-        }
-
-        // PUT: api/Account/Profile
-        [HttpPut("Profile")]
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        public async Task<IActionResult> UpdateProfile([FromBody] ProfileDto model)
-        {
-            if (ModelState.IsValid)
             {
                 int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == userId);
+                await _jwtTokenService.RevokeAllUserTokensAsync(userId);
+                return Ok(new { success = true, message = "All tokens have been revoked successfully." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error revoking all tokens");
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while revoking tokens" });
+            }
+        }
 
+        // GET: api/Account/Roles
+        [HttpGet("Roles")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<ActionResult<IEnumerable<string>>> GetUserRoles()
+        {
+            try
+            {
+                int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+                var roles = await _roleService.GetUserRolesAsync(userId);
+                return Ok(roles.Select(r => r.ToString()));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving user roles");
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while retrieving user roles" });
+            }
+        }
+
+        // ROLE MANAGEMENT ENDPOINTS (ADMIN ONLY)
+
+        // GET: api/Account/Users/{userId}/Roles
+        [HttpGet("Users/{userId}/Roles")]
+        [Authorize(Policy = "RequireAdminRole")]
+        public async Task<ActionResult<IEnumerable<string>>> GetUserRolesById(int userId)
+        {
+            try
+            {
+                var user = await _context.Users.FindAsync(userId);
                 if (user == null)
                 {
                     return NotFound(new { error = "User not found" });
                 }
 
-                // Check if the username is being changed and if it's already taken
-                if (model.Username != user.Username && await _context.Users.AnyAsync(u => u.Username == model.Username))
+                var roles = await _roleService.GetUserRolesAsync(userId);
+                return Ok(roles.Select(r => r.ToString()));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error retrieving roles for user {userId}");
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while retrieving user roles" });
+            }
+        }
+
+        // POST: api/Account/Users/{userId}/Roles
+        [HttpPost("Users/{userId}/Roles")]
+        [Authorize(Policy = "RequireAdminRole")]
+        public async Task<IActionResult> AssignRoleToUser(int userId, [FromBody] AssignRoleDto model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var user = await _context.Users.FindAsync(userId);
+                if (user == null)
                 {
-                    return BadRequest(new { error = "This username is already taken." });
+                    return NotFound(new { error = "User not found" });
                 }
 
-                // Update user information
-                user.Username = model.Username;
-                user.FirstName = model.FirstName;
-                user.LastName = model.LastName;
-                user.PhoneNumber = model.PhoneNumber;
+                // Make sure the role is valid
+                if (!Enum.TryParse<Services.Auth.UserRole>(model.Role, out var roleEnum))
+                {
+                    return BadRequest(new { error = "Invalid role" });
+                }
 
-                await _context.SaveChangesAsync();
+                // Don't allow assigning Admin role through this endpoint for security
+                if (roleEnum == Services.Auth.UserRole.Admin)
+                {
+                    var isCurrentUserSuperAdmin = User.HasClaim(c => c.Type == "IsSuperAdmin" && c.Value == "True");
+                    if (!isCurrentUserSuperAdmin)
+                    {
+                        return Forbid();
+                    }
+                }
 
-                // Update session
-                HttpContext.Session.SetString("Username", user.Username);
+                var success = await _roleService.AssignRoleToUserAsync(userId, roleEnum);
+                if (!success)
+                {
+                    return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Failed to assign role" });
+                }
 
-                // Generate a new token with updated user information
-                string token = _jwtTokenService.GenerateJwtToken(user);
+                // Revoke all existing tokens for this user to enforce the new permissions
+                await _jwtTokenService.RevokeAllUserTokensAsync(userId);
+
+                return Ok(new { success = true, message = $"Role {roleEnum} assigned to user successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error assigning role to user {userId}");
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while assigning the role" });
+            }
+        }
+
+        // DELETE: api/Account/Users/{userId}/Roles/{role}
+        [HttpDelete("Users/{userId}/Roles/{role}")]
+        [Authorize(Policy = "RequireAdminRole")]
+        public async Task<IActionResult> RemoveRoleFromUser(int userId, string role)
+        {
+            try
+            {
+                var user = await _context.Users.FindAsync(userId);
+                if (user == null)
+                {
+                    return NotFound(new { error = "User not found" });
+                }
+
+                // Make sure the role is valid
+                if (!Enum.TryParse<Services.Auth.UserRole>(role, out var roleEnum))
+                {
+                    return BadRequest(new { error = "Invalid role" });
+                }
+
+                // Don't allow removing Admin role through this endpoint for security
+                if (roleEnum == Services.Auth.UserRole.Admin)
+                {
+                    var isCurrentUserSuperAdmin = User.HasClaim(c => c.Type == "IsSuperAdmin" && c.Value == "True");
+                    if (!isCurrentUserSuperAdmin)
+                    {
+                        return Forbid();
+                    }
+                }
+
+                var success = await _roleService.RemoveRoleFromUserAsync(userId, roleEnum);
+                if (!success)
+                {
+                    return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Failed to remove role" });
+                }
+
+                // Revoke all existing tokens for this user to enforce the new permissions
+                await _jwtTokenService.RevokeAllUserTokensAsync(userId);
+
+                return Ok(new { success = true, message = $"Role {roleEnum} removed from user successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error removing role from user {userId}");
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while removing the role" });
+            }
+        }
+
+        // GET: api/Account/Roles/{role}/Users
+        [HttpGet("Roles/{role}/Users")]
+        [Authorize(Policy = "RequireAdminRole")]
+        public async Task<ActionResult<IEnumerable<UserDto>>> GetUsersInRole(string role)
+        {
+            try
+            {
+                // Make sure the role is valid
+                if (!Enum.TryParse<Services.Auth.UserRole>(role, out var roleEnum))
+                {
+                    return BadRequest(new { error = "Invalid role" });
+                }
+
+                var users = await _roleService.GetUsersInRoleAsync(roleEnum);
+                var userDtos = users.Select(u => new UserDto
+                {
+                    UserId = u.UserID,
+                    Username = u.Username,
+                    Email = u.Email,
+                    FirstName = u.FirstName,
+                    LastName = u.LastName,
+                    IsAdmin = u.IsAdmin
+                });
+
+                return Ok(userDtos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error retrieving users in role {role}");
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while retrieving users" });
+            }
+        }
+
+        // ACCOUNT LOCKOUT MANAGEMENT (ADMIN ONLY)
+
+        // GET: api/Account/Users/{userId}/LockoutStatus
+        [HttpGet("Users/{userId}/LockoutStatus")]
+        [Authorize(Policy = "RequireAdminRole")]
+        public async Task<IActionResult> GetUserLockoutStatus(int userId)
+        {
+            try
+            {
+                var user = await _context.Users.FindAsync(userId);
+                if (user == null)
+                {
+                    return NotFound(new { error = "User not found" });
+                }
+
+                var isLocked = await _lockoutService.IsAccountLockedOutAsync(userId);
+
+                // Get active lockout details if locked
+                var lockoutDetails = isLocked ?
+                    await _context.UserAccountLockouts
+                        .Where(l => l.UserId == userId && l.IsActive)
+                        .OrderByDescending(l => l.LockoutStart)
+                        .Select(l => new
+                        {
+                            l.LockoutStart,
+                            l.LockoutEnd,
+                            l.Reason,
+                            l.FailedAttempts
+                        })
+                        .FirstOrDefaultAsync() : null;
 
                 return Ok(new
                 {
-                    success = true,
-                    message = "Your profile has been updated successfully.",
-                    token = token
+                    isLocked,
+                    lockoutDetails
                 });
             }
-
-            return BadRequest(ModelState);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error retrieving lockout status for user {userId}");
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while retrieving lockout status" });
+            }
         }
 
-        // Helper method to hash passwords
-        private string HashPassword(string password)
+        // POST: api/Account/Users/{userId}/Lock
+        [HttpPost("Users/{userId}/Lock")]
+        [Authorize(Policy = "RequireAdminRole")]
+        public async Task<IActionResult> LockUserAccount(int userId, [FromBody] LockAccountDto model)
         {
-            using (var sha256 = SHA256.Create())
+            if (!ModelState.IsValid)
             {
-                var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-                var hash = BitConverter.ToString(hashedBytes).Replace("-", "").ToLower();
-                return hash;
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var user = await _context.Users.FindAsync(userId);
+                if (user == null)
+                {
+                    return NotFound(new { error = "User not found" });
+                }
+
+                // Don't allow locking admin accounts unless you're a super admin
+                if (user.IsAdmin)
+                {
+                    var isCurrentUserSuperAdmin = User.HasClaim(c => c.Type == "IsSuperAdmin" && c.Value == "True");
+                    if (!isCurrentUserSuperAdmin)
+                    {
+                        return Forbid();
+                    }
+                }
+
+                var success = await _lockoutService.LockoutAccountAsync(
+                    userId,
+                    model.Reason,
+                    GetClientIpAddress(),
+                    model.LockoutMinutes);
+
+                if (!success)
+                {
+                    return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Failed to lock account" });
+                }
+
+                // Revoke all existing tokens for this user
+                await _jwtTokenService.RevokeAllUserTokensAsync(userId);
+
+                return Ok(new { success = true, message = "Account locked successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error locking account for user {userId}");
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while locking the account" });
+            }
+        }
+
+        // POST: api/Account/Users/{userId}/Unlock
+        [HttpPost("Users/{userId}/Unlock")]
+        [Authorize(Policy = "RequireAdminRole")]
+        public async Task<IActionResult> UnlockUserAccount(int userId, [FromBody] UnlockAccountDto model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var user = await _context.Users.FindAsync(userId);
+                if (user == null)
+                {
+                    return NotFound(new { error = "User not found" });
+                }
+
+                int adminId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+                var success = await _lockoutService.UnlockAccountAsync(userId, adminId, model.Notes);
+
+                if (!success)
+                {
+                    return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Failed to unlock account" });
+                }
+
+                return Ok(new { success = true, message = "Account unlocked successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error unlocking account for user {userId}");
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while unlocking the account" });
             }
         }
     }

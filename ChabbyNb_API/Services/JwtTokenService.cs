@@ -5,19 +5,33 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.Tasks;
 using ChabbyNb_API.Models;
+using ChabbyNb_API.Services.Auth;
+using ChabbyNb_API.Services.Iterfaces;
 
 namespace ChabbyNb_API.Services
 {
     public class JwtTokenService
     {
         private readonly IConfiguration _configuration;
+        private readonly IRoleService _roleService;
+        private readonly ITokenService _tokenService;
 
-        public JwtTokenService(IConfiguration configuration)
+        public JwtTokenService(
+            IConfiguration configuration,
+            IRoleService roleService = null,
+            ITokenService tokenService = null)
         {
             _configuration = configuration;
+            _roleService = roleService;
+            _tokenService = tokenService;
         }
 
+        /// <summary>
+        /// Legacy method to generate JWT token without refresh token
+        /// Kept for backward compatibility
+        /// </summary>
         public string GenerateJwtToken(User user)
         {
             // Get JWT settings from configuration
@@ -60,6 +74,66 @@ namespace ChabbyNb_API.Services
 
             // Return the serialized token
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        /// <summary>
+        /// New method to generate both JWT and refresh tokens
+        /// </summary>
+        public async Task<TokenResult> GenerateTokensAsync(User user)
+        {
+            // If token service is not available, just return a wrapper around the legacy method
+            if (_tokenService == null)
+            {
+                var accessToken = GenerateJwtToken(user);
+                return new TokenResult
+                {
+                    AccessToken = accessToken,
+                    RefreshToken = null,
+                    AccessTokenExpiration = DateTime.Now.AddMinutes(_configuration.GetValue<int>("Jwt:ExpiryInMinutes", 180)),
+                    RefreshTokenExpiration = DateTime.MinValue
+                };
+            }
+
+            return await _tokenService.GenerateTokensAsync(user);
+        }
+
+        /// <summary>
+        /// Refresh an access token using a refresh token
+        /// </summary>
+        public async Task<TokenResult> RefreshTokenAsync(string refreshToken, string accessToken)
+        {
+            if (_tokenService == null)
+            {
+                throw new InvalidOperationException("Token service is not available. Cannot refresh token.");
+            }
+
+            return await _tokenService.RefreshTokenAsync(refreshToken, accessToken);
+        }
+
+        /// <summary>
+        /// Revoke a refresh token
+        /// </summary>
+        public async Task<bool> RevokeTokenAsync(string refreshToken)
+        {
+            if (_tokenService == null)
+            {
+                throw new InvalidOperationException("Token service is not available. Cannot revoke token.");
+            }
+
+            return await _tokenService.RevokeRefreshTokenAsync(refreshToken);
+        }
+
+        /// <summary>
+        /// Revoke all refresh tokens for a user
+        /// </summary>
+        public async Task<bool> RevokeAllUserTokensAsync(int userId)
+        {
+            if (_tokenService == null)
+            {
+                throw new InvalidOperationException("Token service is not available. Cannot revoke tokens.");
+            }
+
+            return await _tokenService.RevokeAllUserTokensAsync(userId);
         }
     }
 }

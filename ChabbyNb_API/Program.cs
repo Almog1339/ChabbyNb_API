@@ -6,6 +6,11 @@ using ChabbyNb_API.Data;
 using System.Text.Json.Serialization;
 using Microsoft.OpenApi.Models;
 using ChabbyNb_API.Services;
+using ChabbyNb_API.Services.Auth;
+using Microsoft.AspNetCore.Authorization;
+using ChabbyNb_API.Authorization;
+using System.Security.Claims;
+using ChabbyNb_API.Services.Iterfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -54,22 +59,39 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
+
 // Ensure WebRootPath is set
 if (string.IsNullOrEmpty(builder.Environment.WebRootPath))
 {
     builder.Environment.WebRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
     Directory.CreateDirectory(builder.Environment.WebRootPath);
 }
+
 // Add database context
 builder.Services.AddDbContext<ChabbyNbDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add session services (we'll keep these for backward compatibility during transition)
-builder.Services.AddHostedService<BookingExpirationService>();
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<IPaymentService, StripePaymentService>();
+
+// Add our new authentication services
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IAccountLockoutService, AccountLockoutService>();
+builder.Services.AddScoped<JwtTokenService>();
+
+// Register authorization handlers
+builder.Services.AddScoped<IAuthorizationHandler, RoleAuthorizationHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, HousekeepingAuthorizationHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, ReadOnlyAuthorizationHandler>();
+
+// Add background services
+builder.Services.AddHostedService<BookingExpirationService>();
+
+// Add session config
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
@@ -94,17 +116,54 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
+        ClockSkew = TimeSpan.Zero  // Remove clock skew to ensure tokens expire exactly at expiry time
+    };
+
+    // Enable using the token from the query string for SignalR
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        }
     };
 });
 
 // Add authorization policies
 builder.Services.AddAuthorization(options =>
 {
+    // Legacy admin role policy
     options.AddPolicy("RequireAdminRole", policy =>
         policy.RequireAssertion(context =>
             context.User.HasClaim(c =>
-                c.Type == "IsAdmin" && c.Value == "True")));
+                (c.Type == "IsAdmin" && c.Value == "True") ||
+                (c.Type == ClaimTypes.Role && c.Value == UserRole.Admin.ToString()))));
+
+    // New role-based policies
+    options.AddPolicy("RequireHousekeepingRole", policy =>
+        policy.AddRequirements(new HousekeepingRequirement()));
+
+    options.AddPolicy("RequireReadOnlyRole", policy =>
+        policy.AddRequirements(new ReadOnlyRequirement()));
+
+    // Minimum role level policies
+    options.AddPolicy("RequireAdminRoleNew", policy =>
+        policy.AddRequirements(new RoleAuthorizationRequirement(UserRole.Admin)));
+
+    options.AddPolicy("RequireHousekeepingRoleMin", policy =>
+        policy.AddRequirements(new RoleAuthorizationRequirement(UserRole.HousekeepingStaff)));
+
+    options.AddPolicy("RequireReadOnlyRoleMin", policy =>
+        policy.AddRequirements(new RoleAuthorizationRequirement(UserRole.ReadOnlyStaff)));
 });
 
 // Add CORS policy

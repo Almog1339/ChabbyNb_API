@@ -28,6 +28,10 @@ namespace ChabbyNb_API.Data
         public DbSet<ChatConversation> ChatConversations { get; set; }
         public DbSet<ChatMessage> ChatMessages { get; set; }
         public DbSet<MessageTemplate> MessageTemplates { get; set; }
+        public DbSet<UserRoleAssignment> UserRoleAssignments { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<UserSecurityEvent> UserSecurityEvents { get; set; }
+        public DbSet<UserAccountLockout> UserAccountLockouts { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -202,6 +206,38 @@ namespace ChabbyNb_API.Data
                 .HasForeignKey(c => c.UserID)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<UserRoleAssignment>()
+                .HasOne(ur => ur.User)
+                .WithMany()
+                .HasForeignKey(ur => ur.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure RefreshToken relationship
+            modelBuilder.Entity<RefreshToken>()
+                .HasOne(rt => rt.User)
+                .WithMany()
+                .HasForeignKey(rt => rt.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure unique index on RefreshToken.Token
+            modelBuilder.Entity<RefreshToken>()
+                .HasIndex(rt => rt.Token)
+                .IsUnique();
+
+            // Configure UserSecurityEvent relationship
+            modelBuilder.Entity<UserSecurityEvent>()
+                .HasOne(se => se.User)
+                .WithMany()
+                .HasForeignKey(se => se.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Configure UserAccountLockout relationship
+            modelBuilder.Entity<UserAccountLockout>()
+                .HasOne(al => al.User)
+                .WithMany()
+                .HasForeignKey(al => al.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

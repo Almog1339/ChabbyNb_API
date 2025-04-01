@@ -8,6 +8,7 @@ using System.Security.Claims;
 using ChabbyNb_API.Models.DTOs;
 using Microsoft.EntityFrameworkCore;
 using ChabbyNb_API.Services;
+using ChabbyNb_API.Services.Iterfaces;
 
 [ApiController]
 [Route("api/[controller]")]

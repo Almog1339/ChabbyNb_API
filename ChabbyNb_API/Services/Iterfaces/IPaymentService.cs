@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using ChabbyNb_API.Models;
 using ChabbyNb_API.Models.DTOs;
 
-namespace ChabbyNb_API.Services
+namespace ChabbyNb_API.Services.Iterfaces
 {
     public interface IPaymentService
     {

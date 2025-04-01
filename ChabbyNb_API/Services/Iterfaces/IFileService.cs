@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
-namespace ChabbyNb_API.Services
+namespace ChabbyNb_API.Services.Iterfaces
 {
     public interface IFileService
     {

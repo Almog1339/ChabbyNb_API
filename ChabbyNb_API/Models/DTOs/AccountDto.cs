@@ -126,10 +126,73 @@ namespace ChabbyNb_API.Models.DTOs
         public bool Success { get; set; }
         public string Message { get; set; }
         public string Token { get; set; }
+        public string RefreshToken { get; set; }
+        public DateTime TokenExpiration { get; set; }
         public int UserId { get; set; }
         public string Email { get; set; }
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public bool IsAdmin { get; set; }
+        public List<string> Roles { get; set; } = new List<string>();
     }
+
+    // DTO for refresh token requests
+    public class RefreshTokenDto
+    {
+        [Required]
+        public string AccessToken { get; set; }
+
+        [Required]
+        public string RefreshToken { get; set; }
+    }
+    public class LogoutDto
+    {
+        public string RefreshToken { get; set; }
+    }
+
+    // DTO for assigning roles
+    public class AssignRoleDto
+    {
+        [Required]
+        public string Role { get; set; }
+    }
+
+    // DTO for locking accounts
+    public class LockAccountDto
+    {
+        [Required]
+        public string Reason { get; set; }
+
+        public int? LockoutMinutes { get; set; }
+    }
+
+    // DTO for unlocking accounts
+    public class UnlockAccountDto
+    {
+        [Required]
+        public string Notes { get; set; }
+    }
+
+    // DTO for user information
+    public class UserDto
+    {
+        public int UserId { get; set; }
+        public string Username { get; set; }
+        public string Email { get; set; }
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public bool IsAdmin { get; set; }
+    }
+
+    // DTO for security events
+    public class SecurityEventDto
+    {
+        public int Id { get; set; }
+        public int UserId { get; set; }
+        public string EventType { get; set; }
+        public DateTime EventTime { get; set; }
+        public string IpAddress { get; set; }
+        public string AdditionalInfo { get; set; }
+    }
+
 }

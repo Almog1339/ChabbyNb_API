@@ -18,6 +18,7 @@ using SixLabors.ImageSharp;
 using ChabbyNb_API.Services;
 using System.Net.Mail;
 using System.Net;
+using ChabbyNb_API.Services.Iterfaces;
 
 namespace ChabbyNb_API.Controllers
 {

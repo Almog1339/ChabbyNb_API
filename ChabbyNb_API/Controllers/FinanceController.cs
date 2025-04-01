@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using ChabbyNb_API.Data;
 using ChabbyNb_API.Models;
 using ChabbyNb_API.Models.DTOs;
-using ChabbyNb_API.Services;
+using ChabbyNb_API.Services.Iterfaces;
 
 namespace ChabbyNb_API.Controllers
 {

@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
-using ChabbyNb_API.Services;
+using ChabbyNb_API.Services.Iterfaces;
 
 namespace ChabbyNb_API.Controllers
 {
