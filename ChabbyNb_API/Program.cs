@@ -9,8 +9,8 @@ using ChabbyNb_API.Services;
 using ChabbyNb_API.Services.Auth;
 using Microsoft.AspNetCore.Authorization;
 using ChabbyNb_API.Authorization;
-using System.Security.Claims;
 using ChabbyNb_API.Services.Iterfaces;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -78,6 +78,7 @@ builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<IPaymentService, StripePaymentService>();
 
 // Add our new authentication services
+builder.Services.AddHttpContextAccessor(); // Add this line to register IHttpContextAccessor
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAccountLockoutService, AccountLockoutService>();

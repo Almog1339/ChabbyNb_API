@@ -1,38 +1,6 @@
 [
   {
     "ContainingType": "ChabbyNb_API.Controllers.AccountController",
-    "Method": "ChangePassword",
-    "RelativePath": "api/Account/ChangePassword",
-    "HttpMethod": "POST",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "model",
-        "Type": "ChabbyNb_API.Models.DTOs.ChangePasswordDto",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "ChabbyNb_API.Controllers.AccountController",
-    "Method": "ForgotPassword",
-    "RelativePath": "api/Account/ForgotPassword",
-    "HttpMethod": "POST",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "model",
-        "Type": "ChabbyNb_API.Models.DTOs.ForgotPasswordDto",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "ChabbyNb_API.Controllers.AccountController",
     "Method": "Login",
     "RelativePath": "api/Account/Login",
     "HttpMethod": "POST",
@@ -64,20 +32,32 @@
     "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
-    "Parameters": [],
+    "Parameters": [
+      {
+        "Name": "model",
+        "Type": "ChabbyNb_API.Models.DTOs.LogoutDto",
+        "IsRequired": true
+      }
+    ],
     "ReturnTypes": []
   },
   {
     "ContainingType": "ChabbyNb_API.Controllers.AccountController",
-    "Method": "GetProfile",
-    "RelativePath": "api/Account/Profile",
-    "HttpMethod": "GET",
+    "Method": "RefreshToken",
+    "RelativePath": "api/Account/RefreshToken",
+    "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
-    "Parameters": [],
+    "Parameters": [
+      {
+        "Name": "refreshRequest",
+        "Type": "ChabbyNb_API.Models.DTOs.RefreshTokenDto",
+        "IsRequired": true
+      }
+    ],
     "ReturnTypes": [
       {
-        "Type": "ChabbyNb_API.Models.DTOs.ProfileDto",
+        "Type": "ChabbyNb_API.Models.DTOs.LoginResultDto",
         "MediaTypes": [
           "text/plain",
           "application/json",
@@ -89,79 +69,181 @@
   },
   {
     "ContainingType": "ChabbyNb_API.Controllers.AccountController",
-    "Method": "UpdateProfile",
-    "RelativePath": "api/Account/Profile",
-    "HttpMethod": "PUT",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "model",
-        "Type": "ChabbyNb_API.Models.DTOs.ProfileDto",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "ChabbyNb_API.Controllers.AccountController",
-    "Method": "Register",
-    "RelativePath": "api/Account/Register",
+    "Method": "RevokeAllTokens",
+    "RelativePath": "api/Account/RevokeAllTokens",
     "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
-    "Parameters": [
-      {
-        "Name": "model",
-        "Type": "ChabbyNb_API.Models.DTOs.RegisterDto",
-        "IsRequired": true
-      }
-    ],
+    "Parameters": [],
     "ReturnTypes": []
   },
   {
     "ContainingType": "ChabbyNb_API.Controllers.AccountController",
-    "Method": "ResendVerification",
-    "RelativePath": "api/Account/ResendVerification",
-    "HttpMethod": "POST",
+    "Method": "GetUserRoles",
+    "RelativePath": "api/Account/Roles",
+    "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
-    "Parameters": [
+    "Parameters": [],
+    "ReturnTypes": [
       {
-        "Name": "model",
-        "Type": "ChabbyNb_API.Models.DTOs.ForgotPasswordDto",
-        "IsRequired": true
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
       }
-    ],
-    "ReturnTypes": []
+    ]
   },
   {
     "ContainingType": "ChabbyNb_API.Controllers.AccountController",
-    "Method": "ResetPassword",
-    "RelativePath": "api/Account/ResetPassword",
-    "HttpMethod": "POST",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "model",
-        "Type": "ChabbyNb_API.Models.DTOs.ResetPasswordDto",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "ChabbyNb_API.Controllers.AccountController",
-    "Method": "VerifyEmail",
-    "RelativePath": "api/Account/VerifyEmail/{token}",
+    "Method": "GetUsersInRole",
+    "RelativePath": "api/Account/Roles/{role}/Users",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
     "Parameters": [
       {
-        "Name": "token",
+        "Name": "role",
         "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb_API.Models.DTOs.UserDto, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.AccountController",
+    "Method": "LockUserAccount",
+    "RelativePath": "api/Account/Users/{userId}/Lock",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "userId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "model",
+        "Type": "ChabbyNb_API.Models.DTOs.LockAccountDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.AccountController",
+    "Method": "GetUserLockoutStatus",
+    "RelativePath": "api/Account/Users/{userId}/LockoutStatus",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "userId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.AccountController",
+    "Method": "GetUserRolesById",
+    "RelativePath": "api/Account/Users/{userId}/Roles",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "userId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.AccountController",
+    "Method": "AssignRoleToUser",
+    "RelativePath": "api/Account/Users/{userId}/Roles",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "userId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "model",
+        "Type": "ChabbyNb_API.Models.DTOs.AssignRoleDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.AccountController",
+    "Method": "RemoveRoleFromUser",
+    "RelativePath": "api/Account/Users/{userId}/Roles/{role}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "userId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "role",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.AccountController",
+    "Method": "UnlockUserAccount",
+    "RelativePath": "api/Account/Users/{userId}/Unlock",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "userId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "model",
+        "Type": "ChabbyNb_API.Models.DTOs.UnlockAccountDto",
         "IsRequired": true
       }
     ],

@@ -156,18 +156,33 @@ namespace ChabbyNb_API.Services.Auth
         {
             try
             {
-                var roles = await _context.UserRoleAssignments
+                // First check if the user is an admin in the legacy system
+                var user = await _context.Users.FindAsync(userId);
+                var roles = new List<UserRole>();
+
+                // If user is an admin in the legacy system, add Admin role
+                if (user != null && user.IsAdmin)
+                {
+                    roles.Add(UserRole.Admin);
+                }
+
+                // Get roles from the new role assignments system
+                var assignedRoles = await _context.UserRoleAssignments
                     .Where(r => r.UserId == userId)
                     .Select(r => (UserRole)r.Role)
                     .ToListAsync();
 
+                // Add assigned roles to the list
+                roles.AddRange(assignedRoles);
+
+                // If no roles assigned, use Guest as default
                 if (!roles.Any())
                 {
-                    // Always include the default Guest role
-                    return new List<UserRole> { UserRole.Guest };
+                    roles.Add(UserRole.Guest);
                 }
 
-                return roles;
+                // Return distinct roles (in case Admin was added twice)
+                return roles.Distinct();
             }
             catch (Exception ex)
             {
