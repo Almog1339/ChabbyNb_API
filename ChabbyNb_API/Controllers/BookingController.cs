@@ -402,10 +402,10 @@ namespace ChabbyNb_API.Controllers
                         // Process automatic full refund
                         try
                         {
-                            int adminId = 1; // Use a default admin ID for system-generated refunds
+                            int adm = Convert.ToUInt16(_configuration["SysAdm"].ToString());
                             var refundReason = "Automatic refund - Cancellation more than 7 days before check-in";
 
-                            await _paymentService.ProcessRefund(payment.PaymentID, payment.Amount, refundReason, adminId);
+                            await _paymentService.ProcessRefund(payment.PaymentID, payment.Amount, refundReason, adm);
 
                             booking.PaymentStatus = "Refunded";
                             _logger.LogInformation($"Automatic full refund processed for booking {booking.BookingID}");

@@ -261,15 +261,13 @@ namespace ChabbyNb_API.Services
                     .FirstOrDefaultAsync(p => p.PaymentID == paymentId);
 
                 if (payment == null)
-                {
                     throw new InvalidOperationException($"Payment with ID {paymentId} not found");
-                }
+                
 
                 // Verify payment is refundable
                 if (payment.Status != "succeeded")
-                {
                     throw new InvalidOperationException($"Cannot refund payment with status '{payment.Status}'. Only succeeded payments can be refunded.");
-                }
+                
 
                 // Calculate already refunded amount
                 decimal alreadyRefunded = await _context.Refunds
@@ -279,9 +277,8 @@ namespace ChabbyNb_API.Services
                 decimal refundableAmount = payment.Amount - alreadyRefunded;
 
                 if (amount > refundableAmount)
-                {
                     throw new InvalidOperationException($"Requested refund amount {amount} exceeds available refundable amount {refundableAmount}");
-                }
+                
 
                 // Convert amount to smallest unit (cents, etc.)
                 long amountInSmallestUnit = ConvertToSmallestUnit(amount);
