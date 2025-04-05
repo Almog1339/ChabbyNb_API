@@ -28,7 +28,7 @@ namespace ChabbyNb_API.Data
         public DbSet<ChatConversation> ChatConversations { get; set; }
         public DbSet<ChatMessage> ChatMessages { get; set; }
         public DbSet<MessageTemplate> MessageTemplates { get; set; }
-        public DbSet<UserRoleAssignment> UserRoleAssignments { get; set; }
+        // Removed: public DbSet<UserRoleAssignment> UserRoleAssignments { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<UserSecurityEvent> UserSecurityEvents { get; set; }
         public DbSet<UserAccountLockout> UserAccountLockouts { get; set; }
@@ -207,11 +207,7 @@ namespace ChabbyNb_API.Data
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<UserRoleAssignment>()
-                .HasOne(ur => ur.User)
-                .WithMany()
-                .HasForeignKey(ur => ur.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+            // Removed: UserRoleAssignment relationship configuration
 
             // Configure RefreshToken relationship
             modelBuilder.Entity<RefreshToken>()

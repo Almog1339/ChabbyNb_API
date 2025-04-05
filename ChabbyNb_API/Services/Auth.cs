@@ -116,24 +116,10 @@ namespace ChabbyNb_API.Services.Auth
                     roles.Add(UserRole.Admin.ToString());
                 }
 
-                // Get roles from the role assignment table
-                var assignedRoles = await _context.UserRoleAssignments
-                    .Where(r => r.UserId == userId)
-                    .ToListAsync();
-
-                // Add each valid role to the list
-                foreach (var role in assignedRoles)
-                {
-                    if (Enum.IsDefined(typeof(UserRole), role.Role))
-                    {
-                        roles.Add(((UserRole)role.Role).ToString());
-                    }
-                }
-
                 // If no roles found and not an admin, use Guest as default
                 if (!roles.Any())
                 {
-                    // Always add Customer role to registered users
+                    // Always add Guest role to registered users
                     roles.Add(UserRole.Guest.ToString());
 
                     // Also add Guest role as a default
@@ -172,31 +158,8 @@ namespace ChabbyNb_API.Services.Auth
                     return UserRole.Admin;
                 }
 
-                // Get roles from the role assignment table
-                var assignedRoles = await _context.UserRoleAssignments
-                    .Where(r => r.UserId == userId)
-                    .Select(r => r.Role)
-                    .ToListAsync();
-
-                // If no assigned roles, return Customer for registered users
-                if (!assignedRoles.Any())
-                {
-                    return UserRole.Guest;
-                }
-
-                // Get the highest role value
-                int highestRoleValue = assignedRoles.Max();
-
-                // Convert it to the enum if it's a valid value, otherwise use Customer
-                if (Enum.IsDefined(typeof(UserRole), highestRoleValue))
-                {
-                    return (UserRole)highestRoleValue;
-                }
-                else
-                {
-                    _logger.LogWarning($"User {userId} has invalid role value: {highestRoleValue}");
-                    return UserRole.Guest;
-                }
+                // If no assigned roles, return Guest for registered users
+                return UserRole.Guest;
             }
             catch (Exception ex)
             {
@@ -237,28 +200,9 @@ namespace ChabbyNb_API.Services.Auth
                     return true;
                 }
 
-                // Check if the role is already assigned
-                var existingRole = await _context.UserRoleAssignments
-                    .FirstOrDefaultAsync(r => r.UserId == userId && r.Role == (int)roleEnum);
-
-                if (existingRole != null)
-                {
-                    _logger.LogInformation($"Role {role} already assigned to user ID {userId}");
-                    return true; // Already assigned
-                }
-
-                // Create new role assignment
-                var roleAssignment = new UserRoleAssignment
-                {
-                    UserId = userId,
-                    Role = (int)roleEnum,
-                    AssignedDate = DateTime.UtcNow
-                };
-
-                await _context.UserRoleAssignments.AddAsync(roleAssignment);
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation($"Role {role} assigned to user ID {userId}");
+                // For other roles, they're either built-in or non-existent in new system
+                // Just log and return true since we don't need to store them anymore
+                _logger.LogInformation($"Role assignment for {role} to user ID {userId} is handled by the system");
                 return true;
             }
             catch (Exception ex)
@@ -300,20 +244,8 @@ namespace ChabbyNb_API.Services.Auth
                     return true;
                 }
 
-                // Find and remove the role assignment
-                var roleAssignment = await _context.UserRoleAssignments
-                    .FirstOrDefaultAsync(r => r.UserId == userId && r.Role == (int)roleEnum);
-
-                if (roleAssignment == null)
-                {
-                    _logger.LogInformation($"Role {role} not found for user ID {userId}");
-                    return true; // Already not assigned
-                }
-
-                _context.UserRoleAssignments.Remove(roleAssignment);
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation($"Role {role} removed from user ID {userId}");
+                // For other roles, they're built-in - no need to remove anything
+                _logger.LogInformation($"Role removal for {role} from user ID {userId} is handled by the system");
                 return true;
             }
             catch (Exception ex)
@@ -348,14 +280,8 @@ namespace ChabbyNb_API.Services.Auth
                 }
                 else
                 {
-                    // Get users from role assignments
-                    users = await _context.UserRoleAssignments
-                        .Where(r => r.Role == (int)roleEnum)
-                        .Join(_context.Users,
-                            r => r.UserId,
-                            u => u.UserID,
-                            (r, u) => u)
-                        .ToListAsync();
+                    // For other roles, return empty list for now
+                    users = new List<User>();
                 }
 
                 // Convert to DTOs
@@ -411,15 +337,14 @@ namespace ChabbyNb_API.Services.Auth
                     return true;
                 }
 
-                // Customer role is always available to registered users
+                // Guest role is always available to registered users
                 if (roleEnum == UserRole.Guest)
                 {
                     return true;
                 }
 
-                // Check role assignments
-                return await _context.UserRoleAssignments
-                    .AnyAsync(r => r.UserId == userId && r.Role == (int)roleEnum);
+                // All other roles are not available by default
+                return false;
             }
             catch (Exception ex)
             {

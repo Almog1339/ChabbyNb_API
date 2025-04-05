@@ -448,8 +448,7 @@ namespace ChabbyNb_API.Services
                 _context.EmailVerifications.Add(verification);
                 await _context.SaveChangesAsync();
 
-                // Assign default customer role
-                await _roleService.AssignRoleToUserAsync(newUser.UserID, UserRole.Guest.ToString());
+                // Note: We no longer need to assign the Guest role since roles are now built-in
 
                 // Commit the transaction
                 await transaction.CommitAsync();
