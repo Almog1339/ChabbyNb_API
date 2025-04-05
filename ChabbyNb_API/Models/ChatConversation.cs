@@ -93,4 +93,79 @@ namespace ChabbyNb_API.Models
         // Statistics about how often the template is used
         public int UseCount { get; set; }
     }
+
+    public class ContactMessage
+    {
+        [Key]
+        public int ContactMessageID { get; set; }
+
+        [Required]
+        [StringLength(100)]
+        public string Name { get; set; }
+
+        [Required]
+        [EmailAddress]
+        [StringLength(100)]
+        public string Email { get; set; }
+
+        [Required]
+        [StringLength(100)]
+        public string Subject { get; set; }
+
+        [Required]
+        public string Message { get; set; }
+
+        // Optional foreign key to link to registered users
+        public int? UserID { get; set; }
+
+        [ForeignKey("UserID")]
+        public virtual User User { get; set; }
+
+        public DateTime CreatedDate { get; set; } = DateTime.Now;
+
+        public bool IsRead { get; set; } = false;
+
+        public DateTime? ReadDate { get; set; }
+
+        public string Status { get; set; } = "New"; // New, Read, Responded, Archived
+
+        public string AdminNotes { get; set; }
+    }
+
+    public class Message
+    {
+        [Key]
+        public int MessageID { get; set; }
+
+        // Common fields
+        public int? UserID { get; set; }
+        public string Content { get; set; }
+        public DateTime CreatedDate { get; set; }
+
+        // Message type enum
+        public MessageType Type { get; set; }
+
+        // Fields for Contact Messages
+        public string Subject { get; set; }
+        public string Email { get; set; }
+
+        // Fields for Chat Messages
+        public int? ConversationID { get; set; }
+        public bool IsRead { get; set; }
+        public DateTime? ReadDate { get; set; }
+
+        // Navigation properties
+        [ForeignKey("UserID")]
+        public virtual User User { get; set; }
+
+        [ForeignKey("ConversationID")]
+        public virtual ChatConversation Conversation { get; set; }
+    }
+
+    public enum MessageType
+    {
+        Contact,
+        Chat,
+        System
+    }
 }

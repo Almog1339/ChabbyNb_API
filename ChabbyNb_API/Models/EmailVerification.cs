@@ -34,4 +34,22 @@ namespace ChabbyNb_API.Models
         [ForeignKey("UserID")]
         public virtual User User { get; set; }
     }
+
+    public class Tempwd
+    {
+        [Key]
+        public int TempwdID { get; set; }
+
+        public int UserID { get; set; }
+
+        public DateTime ExperationTime { get; set; }
+
+        [StringLength(50)]
+        public string Token { get; set; }
+
+        public bool IsUsed { get; set; }
+
+        [ForeignKey("UserID")]
+        public virtual User User { get; set; }
+    }
 }

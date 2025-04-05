@@ -28,30 +28,6 @@ namespace ChabbyNb_API.Models.DTOs
         }
     }
 
-    public class LoginViewModel
-    {
-        [Required(ErrorMessage = "Email address is required")]
-        [EmailAddress(ErrorMessage = "Invalid email address")]
-        [Display(Name = "Email Address")]
-        public string Email { get; set; }
-
-        [Display(Name = "Password")]
-        [DataType(DataType.Password)]
-        public string Password { get; set; }
-
-        [Display(Name = "Reservation Number")]
-        public string ReservationNumber { get; set; }
-
-        [Display(Name = "Remember me")]
-        public bool RememberMe { get; set; }
-
-        // Custom validation method
-        public bool IsValid()
-        {
-            return !string.IsNullOrEmpty(Password) || !string.IsNullOrEmpty(ReservationNumber);
-        }
-    }
-
     public class RegisterDto
     {
         [Required(ErrorMessage = "Username is required")]
@@ -85,59 +61,10 @@ namespace ChabbyNb_API.Models.DTOs
         public bool AgreeToTerms { get; set; }
     }
 
-    public class RegisterViewModel
-    {
-        [Required(ErrorMessage = "Username is required")]
-        [Display(Name = "Username")]
-        [StringLength(50, ErrorMessage = "Username cannot be longer than 50 characters")]
-        public string Username { get; set; }
-
-        [Required(ErrorMessage = "Email address is required")]
-        [EmailAddress(ErrorMessage = "Invalid email address")]
-        [Display(Name = "Email Address")]
-        public string Email { get; set; }
-
-        [Required(ErrorMessage = "Password is required")]
-        [StringLength(100, ErrorMessage = "The {0} must be at least {2} characters long.", MinimumLength = 6)]
-        [DataType(DataType.Password)]
-        [Display(Name = "Password")]
-        public string Password { get; set; }
-
-        [DataType(DataType.Password)]
-        [Display(Name = "Confirm password")]
-        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
-        public string ConfirmPassword { get; set; }
-
-        [Display(Name = "First Name")]
-        [StringLength(50, ErrorMessage = "First name cannot be longer than 50 characters")]
-        public string FirstName { get; set; }
-
-        [Display(Name = "Last Name")]
-        [StringLength(50, ErrorMessage = "Last name cannot be longer than 50 characters")]
-        public string LastName { get; set; }
-
-        [Display(Name = "Phone Number")]
-        [StringLength(20, ErrorMessage = "Phone number cannot be longer than 20 characters")]
-        [RegularExpression(@"^[0-9\+\-\(\) ]+$", ErrorMessage = "Invalid phone number format")]
-        public string PhoneNumber { get; set; }
-
-        [Display(Name = "I agree to the Terms of Service and Privacy Policy")]
-        [Range(typeof(bool), "true", "true", ErrorMessage = "You must agree to the terms and conditions")]
-        public bool AgreeToTerms { get; set; }
-    }
-
     public class ForgotPasswordDto
     {
         [Required(ErrorMessage = "Email address is required")]
         [EmailAddress(ErrorMessage = "Invalid email address")]
-        public string Email { get; set; }
-    }
-
-    public class ForgotPasswordViewModel
-    {
-        [Required(ErrorMessage = "Email address is required")]
-        [EmailAddress(ErrorMessage = "Invalid email address")]
-        [Display(Name = "Email Address")]
         public string Email { get; set; }
     }
 
@@ -176,25 +103,6 @@ namespace ChabbyNb_API.Models.DTOs
         public string ConfirmPassword { get; set; }
     }
 
-    public class ChangePasswordViewModel
-    {
-        [Required(ErrorMessage = "Current password is required")]
-        [DataType(DataType.Password)]
-        [Display(Name = "Current password")]
-        public string CurrentPassword { get; set; }
-
-        [Required(ErrorMessage = "New password is required")]
-        [StringLength(100, ErrorMessage = "The {0} must be at least {2} characters long.", MinimumLength = 6)]
-        [DataType(DataType.Password)]
-        [Display(Name = "New password")]
-        public string NewPassword { get; set; }
-
-        [DataType(DataType.Password)]
-        [Display(Name = "Confirm new password")]
-        [Compare("NewPassword", ErrorMessage = "The new password and confirmation password do not match.")]
-        public string ConfirmPassword { get; set; }
-    }
-
     public class ProfileDto
     {
         [Required(ErrorMessage = "Username is required")]
@@ -211,32 +119,6 @@ namespace ChabbyNb_API.Models.DTOs
         [StringLength(50, ErrorMessage = "Last name cannot be longer than 50 characters")]
         public string LastName { get; set; }
 
-        [StringLength(20, ErrorMessage = "Phone number cannot be longer than 20 characters")]
-        [RegularExpression(@"^[0-9\+\-\(\) ]+$", ErrorMessage = "Invalid phone number format")]
-        public string PhoneNumber { get; set; }
-    }
-
-    public class ProfileViewModel
-    {
-        [Required(ErrorMessage = "Username is required")]
-        [Display(Name = "Username")]
-        [StringLength(50, ErrorMessage = "Username cannot be longer than 50 characters")]
-        public string Username { get; set; }
-
-        [Display(Name = "Email Address")]
-        [EmailAddress(ErrorMessage = "Invalid email address")]
-        [ReadOnly(true)]
-        public string Email { get; set; }
-
-        [Display(Name = "First Name")]
-        [StringLength(50, ErrorMessage = "First name cannot be longer than 50 characters")]
-        public string FirstName { get; set; }
-
-        [Display(Name = "Last Name")]
-        [StringLength(50, ErrorMessage = "Last name cannot be longer than 50 characters")]
-        public string LastName { get; set; }
-
-        [Display(Name = "Phone Number")]
         [StringLength(20, ErrorMessage = "Phone number cannot be longer than 20 characters")]
         [RegularExpression(@"^[0-9\+\-\(\) ]+$", ErrorMessage = "Invalid phone number format")]
         public string PhoneNumber { get; set; }
@@ -279,22 +161,6 @@ namespace ChabbyNb_API.Models.DTOs
         public string Role { get; set; }
     }
 
-    // DTO for locking accounts
-    public class LockAccountDto
-    {
-        [Required]
-        public string Reason { get; set; }
-
-        public int? LockoutMinutes { get; set; }
-    }
-
-    // DTO for unlocking accounts
-    public class UnlockAccountDto
-    {
-        [Required]
-        public string Notes { get; set; }
-    }
-
     // DTO for user information
     public class UserDto
     {
@@ -306,58 +172,9 @@ namespace ChabbyNb_API.Models.DTOs
         public bool IsAdmin { get; set; }
     }
 
-    // DTO for security events
-    public class SecurityEventDto
-    {
-        public int Id { get; set; }
-        public int UserId { get; set; }
-        public string EventType { get; set; }
-        public DateTime EventTime { get; set; }
-        public string IpAddress { get; set; }
-        public string AdditionalInfo { get; set; }
-    }
-
     #endregion
 
     #region Pet DTOs
-
-    // ViewModel for adding a pet profile in the member zone
-    public class PetViewModel
-    {
-        public int PetID { get; set; }
-
-        [Required(ErrorMessage = "Pet name is required")]
-        [Display(Name = "Pet Name")]
-        [StringLength(50, ErrorMessage = "Pet name cannot be longer than 50 characters")]
-        public string Name { get; set; }
-
-        [Required(ErrorMessage = "Pet type is required")]
-        [Display(Name = "Pet Type")]
-        public string Type { get; set; } // Dog, Cat, etc.
-
-        [Display(Name = "Breed")]
-        public string Breed { get; set; }
-
-        [Display(Name = "Age")]
-        [Range(0, 30, ErrorMessage = "Please enter a valid age between 0 and 30")]
-        public int? Age { get; set; }
-
-        [Display(Name = "Weight (kg)")]
-        [Range(0.1, 100, ErrorMessage = "Please enter a valid weight between 0.1 and 100 kg")]
-        public decimal? Weight { get; set; }
-
-        [Display(Name = "Special Needs")]
-        public string SpecialNeeds { get; set; }
-
-        [Display(Name = "Additional Information")]
-        public string AdditionalInfo { get; set; }
-
-        public IFormFile PetImage { get; set; }
-
-        public string ImageUrl { get; set; }
-
-        public int UserID { get; set; }
-    }
 
     // DTO for pet profiles
     public class PetDto
@@ -402,22 +219,6 @@ namespace ChabbyNb_API.Models.DTOs
         public User User { get; set; }
         public ICollection<Booking> UpcomingBookings { get; set; }
         public ICollection<Booking> RecentBookings { get; set; }
-    }
-
-    // ViewModel for member dashboard
-    public class DashboardViewModel
-    {
-        public User User { get; set; }
-        public ICollection<Booking> UpcomingBookings { get; set; }
-        public ICollection<Booking> RecentBookings { get; set; }
-    }
-
-    public class AdminDashboardDto
-    {
-        public int TotalApartments { get; set; }
-        public int TotalBookings { get; set; }
-        public int TotalUsers { get; set; }
-        public decimal TotalRevenue { get; set; }
     }
 
     #endregion

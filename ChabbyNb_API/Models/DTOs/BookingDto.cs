@@ -70,148 +70,6 @@ namespace ChabbyNb_API.Models.DTOs
         public string PaymentIntentId { get; set; }
     }
 
-    public class BookingDetailsDto
-    {
-        public int BookingID { get; set; }
-        public int ApartmentID { get; set; }
-        public string ApartmentTitle { get; set; }
-        public string PrimaryImageUrl { get; set; }
-        public DateTime CheckInDate { get; set; }
-        public DateTime CheckOutDate { get; set; }
-        public int GuestCount { get; set; }
-        public int PetCount { get; set; }
-        public decimal BasePrice { get; set; }
-        public decimal DiscountAmount { get; set; }
-        public decimal TotalPrice { get; set; }
-        public string PromotionCode { get; set; }
-        public string BookingStatus { get; set; }
-        public string PaymentStatus { get; set; }
-        public string ReservationNumber { get; set; }
-        public DateTime CreatedDate { get; set; }
-        public string SpecialRequests { get; set; }
-        public string Address { get; set; }
-        public string Neighborhood { get; set; }
-        public decimal PricePerNight { get; set; }
-        public int Bedrooms { get; set; }
-        public int Bathrooms { get; set; }
-        public int MaxOccupancy { get; set; }
-        public bool PetFriendly { get; set; }
-        public int NightsCount => (CheckOutDate - CheckInDate).Days;
-        public bool HasReview { get; set; }
-        public ReviewSummaryDto Review { get; set; }
-    }
-
-    public class BookingDto
-    {
-        public int BookingID { get; set; }
-
-        [Required]
-        public int ApartmentID { get; set; }
-
-        public string ApartmentTitle { get; set; }
-
-        [Required]
-        [DataType(DataType.Date)]
-        public DateTime CheckInDate { get; set; }
-
-        [Required]
-        [DataType(DataType.Date)]
-        public DateTime CheckOutDate { get; set; }
-
-        [Required]
-        [Range(1, 20, ErrorMessage = "Please enter a valid number of guests between 1 and 20")]
-        public int GuestCount { get; set; }
-
-        [Range(0, 5, ErrorMessage = "Please enter a valid number of pets between 0 and 5")]
-        public int PetCount { get; set; }
-
-        public decimal TotalPrice { get; set; }
-
-        public string BookingStatus { get; set; }
-
-        public string PaymentStatus { get; set; }
-
-        [StringLength(500, ErrorMessage = "Special requests cannot be longer than 500 characters")]
-        public string SpecialRequests { get; set; }
-
-        // Additional information for presentation
-        public string ImageUrl { get; set; }
-        public int MaxOccupancy { get; set; }
-        public bool PetFriendly { get; set; }
-        public decimal PricePerNight { get; set; }
-        public string Address { get; set; }
-        public string Neighborhood { get; set; }
-
-        // Calculated property
-        public int NightsCount => (CheckOutDate - CheckInDate).Days;
-    }
-
-    // ViewModel for booking information
-    public class BookingViewModel
-    {
-        public int BookingID { get; set; }
-
-        [Required]
-        [Display(Name = "Apartment")]
-        public int ApartmentID { get; set; }
-
-        [Display(Name = "Apartment")]
-        public string ApartmentTitle { get; set; }
-
-        [Required]
-        [Display(Name = "Check-in Date")]
-        [DataType(DataType.Date)]
-        public DateTime CheckInDate { get; set; }
-
-        [Required]
-        [Display(Name = "Check-out Date")]
-        [DataType(DataType.Date)]
-        public DateTime CheckOutDate { get; set; }
-
-        [Required]
-        [Display(Name = "Number of Guests")]
-        [Range(1, 20, ErrorMessage = "Please enter a valid number of guests between 1 and 20")]
-        public int GuestCount { get; set; }
-
-        [Display(Name = "Number of Pets")]
-        [Range(0, 5, ErrorMessage = "Please enter a valid number of pets between 0 and 5")]
-        public int PetCount { get; set; }
-
-        [Display(Name = "Total Price")]
-        [DataType(DataType.Currency)]
-        public decimal TotalPrice { get; set; }
-
-        [Display(Name = "Booking Status")]
-        public string BookingStatus { get; set; }
-
-        [Display(Name = "Payment Status")]
-        public string PaymentStatus { get; set; }
-
-        [Display(Name = "Special Requests")]
-        public string SpecialRequests { get; set; }
-
-        [Display(Name = "Booking Date")]
-        [DataType(DataType.DateTime)]
-        public DateTime CreatedDate { get; set; }
-
-        // Navigation properties
-        public string ImageUrl { get; set; }
-        public int MaxOccupancy { get; set; }
-        public bool PetFriendly { get; set; }
-        public decimal PricePerNight { get; set; }
-        public string Address { get; set; }
-        public string Neighborhood { get; set; }
-
-        // Calculated properties
-        public int NightsCount
-        {
-            get
-            {
-                return (CheckOutDate - CheckInDate).Days;
-            }
-        }
-    }
-
     #endregion
 
     #region Booking Cancellation DTOs
@@ -237,21 +95,6 @@ namespace ChabbyNb_API.Models.DTOs
 
     #endregion
 
-    #region Booking Statistics DTOs
-
-    public class BookingStatisticsDto
-    {
-        public int TotalBookings { get; set; }
-        public int CompletedBookings { get; set; }
-        public int UpcomingBookings { get; set; }
-        public int CancelledBookings { get; set; }
-        public decimal TotalSpent { get; set; }
-        public int NightsStayed { get; set; }
-        public double AverageRating { get; set; }
-    }
-
-    #endregion
-
     #region Pricing and Promotion DTOs
 
     // For daily price calculations
@@ -260,22 +103,6 @@ namespace ChabbyNb_API.Models.DTOs
         public DateTime Date { get; set; }
         public decimal Price { get; set; }
         public string PriceType { get; set; }
-    }
-
-    // Represents the full booking price calculation result
-    public class BookingPriceResultDto
-    {
-        public int ApartmentId { get; set; }
-        public DateTime CheckInDate { get; set; }
-        public DateTime CheckOutDate { get; set; }
-        public List<DailyPriceDto> DailyPrices { get; set; }
-        public decimal BasePrice { get; set; }
-        public decimal PetFee { get; set; }
-        public decimal TotalBeforeDiscount { get; set; }
-        public decimal DiscountAmount { get; set; }
-        public decimal TotalPrice { get; set; }
-        public string PromotionCode { get; set; }
-        public int? PromotionId { get; set; }
     }
 
     #endregion
@@ -462,75 +289,6 @@ namespace ChabbyNb_API.Models.DTOs
         public int? ApartmentID { get; set; }
     }
 
-    public class UpdatePromotionDto
-    {
-        public int PromotionID { get; set; }
-
-        [Required]
-        [StringLength(100)]
-        public string Name { get; set; }
-
-        [StringLength(500)]
-        public string Description { get; set; }
-
-        [Required]
-        [RegularExpression(@"^(Percentage|FixedAmount)$", ErrorMessage = "Discount type must be either 'Percentage' or 'FixedAmount'")]
-        public string DiscountType { get; set; }
-
-        [Required]
-        [Range(0.01, 100, ErrorMessage = "For percentage discount, value must be between 0.01 and 100")]
-        public decimal DiscountValue { get; set; }
-
-        [Range(1, 365, ErrorMessage = "Minimum stay must be between 1 and 365 nights")]
-        public decimal? MinimumStayNights { get; set; }
-
-        [Range(0.01, 100000, ErrorMessage = "Minimum booking amount must be positive")]
-        public decimal? MinimumBookingAmount { get; set; }
-
-        [Range(0.01, 10000, ErrorMessage = "Maximum discount amount must be positive")]
-        public decimal? MaximumDiscountAmount { get; set; }
-
-        [DataType(DataType.Date)]
-        public DateTime? StartDate { get; set; }
-
-        [DataType(DataType.Date)]
-        public DateTime? EndDate { get; set; }
-
-        [Range(1, 1000, ErrorMessage = "Usage limit must be between 1 and 1000")]
-        public int? UsageLimit { get; set; }
-
-        public bool IsActive { get; set; }
-
-        public int? ApartmentID { get; set; }
-    }
-
-    public class VerifyPromotionDto
-    {
-        [Required]
-        public string Code { get; set; }
-
-        [Required]
-        public int ApartmentID { get; set; }
-
-        [Required]
-        [DataType(DataType.Date)]
-        public DateTime CheckInDate { get; set; }
-
-        [Required]
-        [DataType(DataType.Date)]
-        public DateTime CheckOutDate { get; set; }
-
-        public decimal BookingAmount { get; set; }
-    }
-
-    public class PromotionValidationResultDto
-    {
-        public bool IsValid { get; set; }
-        public string ErrorMessage { get; set; }
-        public PromotionDto Promotion { get; set; }
-        public decimal DiscountAmount { get; set; }
-        public decimal FinalPrice { get; set; }
-    }
 
     #endregion
 
@@ -551,31 +309,6 @@ namespace ChabbyNb_API.Models.DTOs
 
         public DateTime CheckInDate { get; set; }
         public DateTime CheckOutDate { get; set; }
-    }
-
-    public class ReviewViewModel
-    {
-        public int ReviewID { get; set; }
-        public int BookingID { get; set; }
-        public int ApartmentID { get; set; }
-        public string ApartmentTitle { get; set; }
-
-        [Range(1, 5, ErrorMessage = "Please select a rating between 1 and 5")]
-        public int Rating { get; set; }
-
-        [Required(ErrorMessage = "Please provide a comment about your stay")]
-        public string Comment { get; set; }
-
-        public DateTime CheckInDate { get; set; }
-        public DateTime CheckOutDate { get; set; }
-    }
-
-    public class ReviewSummaryDto
-    {
-        public int ReviewID { get; set; }
-        public int Rating { get; set; }
-        public string Comment { get; set; }
-        public DateTime CreatedDate { get; set; }
     }
 
     #endregion

@@ -3,24 +3,16 @@
   "WorkspaceRootPath": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\services\\iterfaces\\iroleservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\services\\iterfaces\\iroleservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\services\\auth.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\services\\auth.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\data\\chabbynbdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\data\\chabbynbdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\services\\accountlockoutservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\services\\accountlockoutservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\models\\userroleassignment.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\models\\userroleassignment.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|c:\\users\\almog\\onedrive\\documents\\github\\chabbynb_api\\chabbynb_api\\models\\chatconversation.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E21B5692-B44E-46FF-A3FC-561FF7990C1E}|ChabbyNb_API\\ChabbyNb_API.csproj|solutionrelative:chabbynb_api\\models\\chatconversation.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -29,72 +21,46 @@
       "VerticalTabListWidth": 256,
       "DocumentGroups": [
         {
-          "DockedWidth": 200,
-          "SelectedChildIndex": 4,
+          "DockedWidth": 182,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "Auth.cs",
               "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Services\\Auth.cs",
               "RelativeDocumentMoniker": "ChabbyNb_API\\Services\\Auth.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Services\\Auth.cs*",
-              "RelativeToolTip": "ChabbyNb_API\\Services\\Auth.cs*",
-              "ViewState": "AgIAALUBAAAAAAAAAAAqwMkBAAABAAAAAAAAAA==",
+              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Services\\Auth.cs",
+              "RelativeToolTip": "ChabbyNb_API\\Services\\Auth.cs",
+              "ViewState": "AgIAAFMAAAAAAAAAAAAswHcAAABGAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-05T11:43:16.062Z",
+              "WhenOpened": "2025-04-05T13:06:31.791Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ChabbyNbDBContext.cs",
+              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Data\\ChabbyNbDBContext.cs",
+              "RelativeDocumentMoniker": "ChabbyNb_API\\Data\\ChabbyNbDBContext.cs",
+              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Data\\ChabbyNbDBContext.cs",
+              "RelativeToolTip": "ChabbyNb_API\\Data\\ChabbyNbDBContext.cs",
+              "ViewState": "AgIAAB8AAAAAAAAAAAAvwCAAAABKAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-04-05T12:28:17.262Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 2,
-              "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Program.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Program.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Program.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Program.cs",
-              "ViewState": "AgIAADAAAAAAAAAAAAAiwFIAAAA4AAAAAAAAAA==",
+              "Title": "ChatConversation.cs",
+              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\ChatConversation.cs",
+              "RelativeDocumentMoniker": "ChabbyNb_API\\Models\\ChatConversation.cs",
+              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\ChatConversation.cs",
+              "RelativeToolTip": "ChabbyNb_API\\Models\\ChatConversation.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACIAAAAVAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-05T11:42:20.611Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "AccountLockoutService.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Services\\AccountLockoutService.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Services\\AccountLockoutService.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Services\\AccountLockoutService.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Services\\AccountLockoutService.cs",
-              "ViewState": "AgIAAAkBAAAAAAAAAAAlwCMBAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-05T11:38:31.581Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "UserRoleAssignment.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\UserRoleAssignment.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Models\\UserRoleAssignment.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Models\\UserRoleAssignment.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Models\\UserRoleAssignment.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-05T11:28:09.462Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "IRoleService.cs",
-              "DocumentMoniker": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Services\\Iterfaces\\IRoleService.cs",
-              "RelativeDocumentMoniker": "ChabbyNb_API\\Services\\Iterfaces\\IRoleService.cs",
-              "ToolTip": "C:\\Users\\almog\\OneDrive\\Documents\\GitHub\\ChabbyNb_API\\ChabbyNb_API\\Services\\Iterfaces\\IRoleService.cs",
-              "RelativeToolTip": "ChabbyNb_API\\Services\\Iterfaces\\IRoleService.cs",
-              "ViewState": "AgIAABAAAAAAAAAAAADwvx8AAAANAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-05T07:44:08.582Z",
+              "WhenOpened": "2025-04-05T12:27:36.831Z",
               "EditorCaption": ""
             }
           ]
