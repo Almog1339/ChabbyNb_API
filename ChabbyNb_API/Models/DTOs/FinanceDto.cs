@@ -4,6 +4,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ChabbyNb_API.Models.DTOs
 {
+    #region Financial Overview DTOs
+
     public class FinancialOverviewDto
     {
         public decimal TotalRevenue { get; set; }
@@ -24,6 +26,10 @@ namespace ChabbyNb_API.Models.DTOs
         public decimal RefundedAmount { get; set; }
         public int Transactions { get; set; }
     }
+
+    #endregion
+
+    #region Payment List and Details DTOs
 
     public class PaymentListItemDto
     {
@@ -52,6 +58,10 @@ namespace ChabbyNb_API.Models.DTOs
         public decimal RefundableAmount { get; set; }
     }
 
+    #endregion
+
+    #region Refund DTOs
+
     public class RefundDto
     {
         public int RefundID { get; set; }
@@ -76,6 +86,10 @@ namespace ChabbyNb_API.Models.DTOs
         public string Reason { get; set; }
     }
 
+    #endregion
+
+    #region Manual Charge DTOs
+
     public class ManualChargeDto
     {
         [Required]
@@ -91,4 +105,6 @@ namespace ChabbyNb_API.Models.DTOs
         [Required]
         public string PaymentMethodID { get; set; }
     }
+
+    #endregion
 }

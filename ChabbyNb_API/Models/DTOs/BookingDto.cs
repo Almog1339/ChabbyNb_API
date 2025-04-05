@@ -1,8 +1,11 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using System.Collections.Generic;
 
 namespace ChabbyNb_API.Models.DTOs
 {
+    #region Booking Request & Response DTOs
+
     public class BookingCreateDto
     {
         [Required]
@@ -35,8 +38,8 @@ namespace ChabbyNb_API.Models.DTOs
     {
         [Required]
         public string PaymentIntentId { get; set; }
-        [Required]
 
+        [Required]
         public string PaymentMethodId { get; set; }
     }
 
@@ -65,7 +68,6 @@ namespace ChabbyNb_API.Models.DTOs
         public bool HasReview { get; set; }
         public string PaymentIntentClientSecret { get; set; }
         public string PaymentIntentId { get; set; }
-
     }
 
     public class BookingDetailsDto
@@ -99,6 +101,121 @@ namespace ChabbyNb_API.Models.DTOs
         public ReviewSummaryDto Review { get; set; }
     }
 
+    public class BookingDto
+    {
+        public int BookingID { get; set; }
+
+        [Required]
+        public int ApartmentID { get; set; }
+
+        public string ApartmentTitle { get; set; }
+
+        [Required]
+        [DataType(DataType.Date)]
+        public DateTime CheckInDate { get; set; }
+
+        [Required]
+        [DataType(DataType.Date)]
+        public DateTime CheckOutDate { get; set; }
+
+        [Required]
+        [Range(1, 20, ErrorMessage = "Please enter a valid number of guests between 1 and 20")]
+        public int GuestCount { get; set; }
+
+        [Range(0, 5, ErrorMessage = "Please enter a valid number of pets between 0 and 5")]
+        public int PetCount { get; set; }
+
+        public decimal TotalPrice { get; set; }
+
+        public string BookingStatus { get; set; }
+
+        public string PaymentStatus { get; set; }
+
+        [StringLength(500, ErrorMessage = "Special requests cannot be longer than 500 characters")]
+        public string SpecialRequests { get; set; }
+
+        // Additional information for presentation
+        public string ImageUrl { get; set; }
+        public int MaxOccupancy { get; set; }
+        public bool PetFriendly { get; set; }
+        public decimal PricePerNight { get; set; }
+        public string Address { get; set; }
+        public string Neighborhood { get; set; }
+
+        // Calculated property
+        public int NightsCount => (CheckOutDate - CheckInDate).Days;
+    }
+
+    // ViewModel for booking information
+    public class BookingViewModel
+    {
+        public int BookingID { get; set; }
+
+        [Required]
+        [Display(Name = "Apartment")]
+        public int ApartmentID { get; set; }
+
+        [Display(Name = "Apartment")]
+        public string ApartmentTitle { get; set; }
+
+        [Required]
+        [Display(Name = "Check-in Date")]
+        [DataType(DataType.Date)]
+        public DateTime CheckInDate { get; set; }
+
+        [Required]
+        [Display(Name = "Check-out Date")]
+        [DataType(DataType.Date)]
+        public DateTime CheckOutDate { get; set; }
+
+        [Required]
+        [Display(Name = "Number of Guests")]
+        [Range(1, 20, ErrorMessage = "Please enter a valid number of guests between 1 and 20")]
+        public int GuestCount { get; set; }
+
+        [Display(Name = "Number of Pets")]
+        [Range(0, 5, ErrorMessage = "Please enter a valid number of pets between 0 and 5")]
+        public int PetCount { get; set; }
+
+        [Display(Name = "Total Price")]
+        [DataType(DataType.Currency)]
+        public decimal TotalPrice { get; set; }
+
+        [Display(Name = "Booking Status")]
+        public string BookingStatus { get; set; }
+
+        [Display(Name = "Payment Status")]
+        public string PaymentStatus { get; set; }
+
+        [Display(Name = "Special Requests")]
+        public string SpecialRequests { get; set; }
+
+        [Display(Name = "Booking Date")]
+        [DataType(DataType.DateTime)]
+        public DateTime CreatedDate { get; set; }
+
+        // Navigation properties
+        public string ImageUrl { get; set; }
+        public int MaxOccupancy { get; set; }
+        public bool PetFriendly { get; set; }
+        public decimal PricePerNight { get; set; }
+        public string Address { get; set; }
+        public string Neighborhood { get; set; }
+
+        // Calculated properties
+        public int NightsCount
+        {
+            get
+            {
+                return (CheckOutDate - CheckInDate).Days;
+            }
+        }
+    }
+
+    #endregion
+
+    #region Booking Cancellation DTOs
+
     public class BookingCancellationDto
     {
         public int BookingID { get; set; }
@@ -118,13 +235,9 @@ namespace ChabbyNb_API.Models.DTOs
         public decimal? RefundAmount { get; set; }
     }
 
-    public class ReviewSummaryDto
-    {
-        public int ReviewID { get; set; }
-        public int Rating { get; set; }
-        public string Comment { get; set; }
-        public DateTime CreatedDate { get; set; }
-    }
+    #endregion
+
+    #region Booking Statistics DTOs
 
     public class BookingStatisticsDto
     {
@@ -136,4 +249,334 @@ namespace ChabbyNb_API.Models.DTOs
         public int NightsStayed { get; set; }
         public double AverageRating { get; set; }
     }
+
+    #endregion
+
+    #region Pricing and Promotion DTOs
+
+    // For daily price calculations
+    public class DailyPriceDto
+    {
+        public DateTime Date { get; set; }
+        public decimal Price { get; set; }
+        public string PriceType { get; set; }
+    }
+
+    // Represents the full booking price calculation result
+    public class BookingPriceResultDto
+    {
+        public int ApartmentId { get; set; }
+        public DateTime CheckInDate { get; set; }
+        public DateTime CheckOutDate { get; set; }
+        public List<DailyPriceDto> DailyPrices { get; set; }
+        public decimal BasePrice { get; set; }
+        public decimal PetFee { get; set; }
+        public decimal TotalBeforeDiscount { get; set; }
+        public decimal DiscountAmount { get; set; }
+        public decimal TotalPrice { get; set; }
+        public string PromotionCode { get; set; }
+        public int? PromotionId { get; set; }
+    }
+
+    #endregion
+
+    #region Seasonal Pricing DTOs
+
+    public class SeasonalPricingDto
+    {
+        public int SeasonalPricingID { get; set; }
+
+        public int ApartmentID { get; set; }
+
+        [Required]
+        [StringLength(100)]
+        public string Name { get; set; }
+
+        [Required]
+        [DataType(DataType.Date)]
+        public DateTime StartDate { get; set; }
+
+        [Required]
+        [DataType(DataType.Date)]
+        public DateTime EndDate { get; set; }
+
+        [Required]
+        public decimal PricePerNight { get; set; }
+
+        [StringLength(255)]
+        public string Description { get; set; }
+
+        public int Priority { get; set; }
+
+        public bool IsActive { get; set; }
+
+        // Helper properties for frontend display
+        public string ApartmentTitle { get; set; }
+        public decimal BasePrice { get; set; }
+        public decimal PriceDifference { get; set; }
+        public string PriceChangeDisplay { get; set; }
+    }
+
+    public class CreateSeasonalPricingDto
+    {
+        public int ApartmentID { get; set; }
+
+        [Required]
+        [StringLength(100)]
+        public string Name { get; set; }
+
+        [Required]
+        [DataType(DataType.Date)]
+        public DateTime StartDate { get; set; }
+
+        [Required]
+        [DataType(DataType.Date)]
+        public DateTime EndDate { get; set; }
+
+        [Required]
+        [Range(1, 10000)]
+        public decimal PricePerNight { get; set; }
+
+        [StringLength(255)]
+        public string Description { get; set; }
+
+        public int Priority { get; set; } = 0;
+    }
+
+    public class UpdateSeasonalPricingDto
+    {
+        public int SeasonalPricingID { get; set; }
+
+        [Required]
+        [StringLength(100)]
+        public string Name { get; set; }
+
+        [Required]
+        [DataType(DataType.Date)]
+        public DateTime StartDate { get; set; }
+
+        [Required]
+        [DataType(DataType.Date)]
+        public DateTime EndDate { get; set; }
+
+        [Required]
+        [Range(1, 10000)]
+        public decimal PricePerNight { get; set; }
+
+        [StringLength(255)]
+        public string Description { get; set; }
+
+        public int Priority { get; set; }
+
+        public bool IsActive { get; set; }
+    }
+
+    #endregion
+
+    #region Promotion DTOs
+
+    public class PromotionDto
+    {
+        public int PromotionID { get; set; }
+
+        public string Name { get; set; }
+
+        public string Code { get; set; }
+
+        public string Description { get; set; }
+
+        public string DiscountType { get; set; }
+
+        public decimal DiscountValue { get; set; }
+
+        public decimal? MinimumStayNights { get; set; }
+
+        public decimal? MinimumBookingAmount { get; set; }
+
+        public decimal? MaximumDiscountAmount { get; set; }
+
+        public DateTime? StartDate { get; set; }
+
+        public DateTime? EndDate { get; set; }
+
+        public int? UsageLimit { get; set; }
+
+        public int UsageCount { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public DateTime CreatedDate { get; set; }
+
+        public int? ApartmentID { get; set; }
+
+        public string ApartmentTitle { get; set; }
+
+        // Helper properties for display
+        public string StatusDisplay { get; set; }
+        public string DateRangeDisplay { get; set; }
+        public string DiscountDisplay { get; set; }
+        public bool IsExpired => EndDate.HasValue && EndDate.Value < DateTime.Today;
+        public bool IsUsageLimitReached => UsageLimit.HasValue && UsageCount >= UsageLimit.Value;
+    }
+
+    public class CreatePromotionDto
+    {
+        [Required]
+        [StringLength(100)]
+        public string Name { get; set; }
+
+        [Required]
+        [StringLength(20)]
+        [RegularExpression(@"^[A-Z0-9]{3,20}$", ErrorMessage = "Code must be 3-20 uppercase letters or numbers, no spaces or special characters")]
+        public string Code { get; set; }
+
+        [StringLength(500)]
+        public string Description { get; set; }
+
+        [Required]
+        [RegularExpression(@"^(Percentage|FixedAmount)$", ErrorMessage = "Discount type must be either 'Percentage' or 'FixedAmount'")]
+        public string DiscountType { get; set; }
+
+        [Required]
+        [Range(0.01, 100, ErrorMessage = "For percentage discount, value must be between 0.01 and 100")]
+        public decimal DiscountValue { get; set; }
+
+        [Range(1, 365, ErrorMessage = "Minimum stay must be between 1 and 365 nights")]
+        public decimal? MinimumStayNights { get; set; }
+
+        [Range(0.01, 100000, ErrorMessage = "Minimum booking amount must be positive")]
+        public decimal? MinimumBookingAmount { get; set; }
+
+        [Range(0.01, 10000, ErrorMessage = "Maximum discount amount must be positive")]
+        public decimal? MaximumDiscountAmount { get; set; }
+
+        [DataType(DataType.Date)]
+        public DateTime? StartDate { get; set; }
+
+        [DataType(DataType.Date)]
+        public DateTime? EndDate { get; set; }
+
+        [Range(1, 1000, ErrorMessage = "Usage limit must be between 1 and 1000")]
+        public int? UsageLimit { get; set; }
+
+        public int? ApartmentID { get; set; }
+    }
+
+    public class UpdatePromotionDto
+    {
+        public int PromotionID { get; set; }
+
+        [Required]
+        [StringLength(100)]
+        public string Name { get; set; }
+
+        [StringLength(500)]
+        public string Description { get; set; }
+
+        [Required]
+        [RegularExpression(@"^(Percentage|FixedAmount)$", ErrorMessage = "Discount type must be either 'Percentage' or 'FixedAmount'")]
+        public string DiscountType { get; set; }
+
+        [Required]
+        [Range(0.01, 100, ErrorMessage = "For percentage discount, value must be between 0.01 and 100")]
+        public decimal DiscountValue { get; set; }
+
+        [Range(1, 365, ErrorMessage = "Minimum stay must be between 1 and 365 nights")]
+        public decimal? MinimumStayNights { get; set; }
+
+        [Range(0.01, 100000, ErrorMessage = "Minimum booking amount must be positive")]
+        public decimal? MinimumBookingAmount { get; set; }
+
+        [Range(0.01, 10000, ErrorMessage = "Maximum discount amount must be positive")]
+        public decimal? MaximumDiscountAmount { get; set; }
+
+        [DataType(DataType.Date)]
+        public DateTime? StartDate { get; set; }
+
+        [DataType(DataType.Date)]
+        public DateTime? EndDate { get; set; }
+
+        [Range(1, 1000, ErrorMessage = "Usage limit must be between 1 and 1000")]
+        public int? UsageLimit { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public int? ApartmentID { get; set; }
+    }
+
+    public class VerifyPromotionDto
+    {
+        [Required]
+        public string Code { get; set; }
+
+        [Required]
+        public int ApartmentID { get; set; }
+
+        [Required]
+        [DataType(DataType.Date)]
+        public DateTime CheckInDate { get; set; }
+
+        [Required]
+        [DataType(DataType.Date)]
+        public DateTime CheckOutDate { get; set; }
+
+        public decimal BookingAmount { get; set; }
+    }
+
+    public class PromotionValidationResultDto
+    {
+        public bool IsValid { get; set; }
+        public string ErrorMessage { get; set; }
+        public PromotionDto Promotion { get; set; }
+        public decimal DiscountAmount { get; set; }
+        public decimal FinalPrice { get; set; }
+    }
+
+    #endregion
+
+    #region Review DTOs
+
+    public class ReviewDto
+    {
+        public int ReviewID { get; set; }
+        public int BookingID { get; set; }
+        public int ApartmentID { get; set; }
+        public string ApartmentTitle { get; set; }
+
+        [Range(1, 5, ErrorMessage = "Please select a rating between 1 and 5")]
+        public int Rating { get; set; }
+
+        [Required(ErrorMessage = "Please provide a comment about your stay")]
+        public string Comment { get; set; }
+
+        public DateTime CheckInDate { get; set; }
+        public DateTime CheckOutDate { get; set; }
+    }
+
+    public class ReviewViewModel
+    {
+        public int ReviewID { get; set; }
+        public int BookingID { get; set; }
+        public int ApartmentID { get; set; }
+        public string ApartmentTitle { get; set; }
+
+        [Range(1, 5, ErrorMessage = "Please select a rating between 1 and 5")]
+        public int Rating { get; set; }
+
+        [Required(ErrorMessage = "Please provide a comment about your stay")]
+        public string Comment { get; set; }
+
+        public DateTime CheckInDate { get; set; }
+        public DateTime CheckOutDate { get; set; }
+    }
+
+    public class ReviewSummaryDto
+    {
+        public int ReviewID { get; set; }
+        public int Rating { get; set; }
+        public string Comment { get; set; }
+        public DateTime CreatedDate { get; set; }
+    }
+
+    #endregion
 }

@@ -18,14 +18,16 @@ namespace ChabbyNb_API.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class MembersController : ControllerBase
+    public class MembersController : BaseApiController
     {
-        private readonly ChabbyNbDbContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public MembersController(ChabbyNbDbContext context, IWebHostEnvironment webHostEnvironment)
+        public MembersController(
+            ChabbyNbDbContext context,
+            IWebHostEnvironment webHostEnvironment,
+            ILogger<MembersController> logger)
+            : base(context, logger)
         {
-            _context = context;
             _webHostEnvironment = webHostEnvironment;
         }
 
@@ -33,13 +35,17 @@ namespace ChabbyNb_API.Controllers
         [HttpGet("Dashboard")]
         public async Task<IActionResult> Dashboard()
         {
-            // Get current user
-            var userEmail = User.Identity.Name;
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+            // Get current user ID using the base controller method
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
+            {
+                return Unauthorized(CreateResponse(false, "User not authenticated"));
+            }
 
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == userId.Value);
             if (user == null)
             {
-                return NotFound("User not found");
+                return NotFound(CreateResponse(false, "User not found"));
             }
 
             // Get user's upcoming bookings
@@ -81,12 +87,16 @@ namespace ChabbyNb_API.Controllers
         [HttpGet("Bookings")]
         public async Task<IActionResult> Bookings()
         {
-            var userEmail = User.Identity.Name;
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
+            {
+                return Unauthorized(CreateResponse(false, "User not authenticated"));
+            }
 
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == userId.Value);
             if (user == null)
             {
-                return NotFound("User not found");
+                return NotFound(CreateResponse(false, "User not found"));
             }
 
             var bookings = await _context.Bookings
@@ -103,23 +113,21 @@ namespace ChabbyNb_API.Controllers
         [HttpGet("Bookings/{id}")]
         public async Task<IActionResult> BookingDetails(int id)
         {
-            var userEmail = User.Identity.Name;
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
-
-            if (user == null)
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
             {
-                return NotFound("User not found");
+                return Unauthorized(CreateResponse(false, "User not authenticated"));
             }
 
             var booking = await _context.Bookings
                 .Include(b => b.Apartment)
                     .ThenInclude(a => a.ApartmentImages)
                 .Include(b => b.Reviews)
-                .FirstOrDefaultAsync(b => b.BookingID == id && b.UserID == user.UserID);
+                .FirstOrDefaultAsync(b => b.BookingID == id && b.UserID == userId.Value);
 
             if (booking == null)
             {
-                return NotFound("Booking not found");
+                return NotFound(CreateResponse(false, "Booking not found"));
             }
 
             return Ok(booking);
@@ -129,26 +137,24 @@ namespace ChabbyNb_API.Controllers
         [HttpGet("Bookings/{id}/CancelInfo")]
         public async Task<IActionResult> CancelBookingInfo(int id)
         {
-            var userEmail = User.Identity.Name;
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
-
-            if (user == null)
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
             {
-                return NotFound("User not found");
+                return Unauthorized(CreateResponse(false, "User not authenticated"));
             }
 
             var booking = await _context.Bookings
                 .Include(b => b.Apartment)
                 .FirstOrDefaultAsync(b =>
                     b.BookingID == id &&
-                    b.UserID == user.UserID &&
+                    b.UserID == userId.Value &&
                     b.BookingStatus != "Canceled" &&
                     b.BookingStatus != "Completed" &&
                     b.CheckInDate > DateTime.Today);
 
             if (booking == null)
             {
-                return NotFound("Booking not found or cannot be canceled");
+                return NotFound(CreateResponse(false, "Booking not found or cannot be canceled"));
             }
 
             return Ok(booking);
@@ -158,25 +164,23 @@ namespace ChabbyNb_API.Controllers
         [HttpPost("Bookings/{id}/Cancel")]
         public async Task<IActionResult> CancelBooking(int id)
         {
-            var userEmail = User.Identity.Name;
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
-
-            if (user == null)
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
             {
-                return NotFound("User not found");
+                return Unauthorized(CreateResponse(false, "User not authenticated"));
             }
 
             var booking = await _context.Bookings
                 .FirstOrDefaultAsync(b =>
                     b.BookingID == id &&
-                    b.UserID == user.UserID &&
+                    b.UserID == userId.Value &&
                     b.BookingStatus != "Canceled" &&
                     b.BookingStatus != "Completed" &&
                     b.CheckInDate > DateTime.Today);
 
             if (booking == null)
             {
-                return NotFound("Booking not found or cannot be canceled");
+                return NotFound(CreateResponse(false, "Booking not found or cannot be canceled"));
             }
 
             // Update booking status
@@ -187,25 +191,23 @@ namespace ChabbyNb_API.Controllers
 
             await _context.SaveChangesAsync();
 
-            return Ok(new { success = true, message = "Booking canceled successfully", booking });
+            return Ok(CreateResponse(true, "Booking canceled successfully", booking));
         }
 
         // GET: api/Members/Reviews
         [HttpGet("Reviews")]
         public async Task<IActionResult> Reviews()
         {
-            var userEmail = User.Identity.Name;
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
-
-            if (user == null)
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
             {
-                return NotFound("User not found");
+                return Unauthorized(CreateResponse(false, "User not authenticated"));
             }
 
             var reviews = await _context.Reviews
                 .Include(r => r.Apartment)
                 .Include(r => r.Booking)
-                .Where(r => r.UserID == user.UserID)
+                .Where(r => r.UserID == userId.Value)
                 .OrderByDescending(r => r.CreatedDate)
                 .ToListAsync();
 
@@ -216,25 +218,23 @@ namespace ChabbyNb_API.Controllers
         [HttpGet("Bookings/{id}/AddReview")]
         public async Task<IActionResult> AddReviewInfo(int id)
         {
-            var userEmail = User.Identity.Name;
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
-
-            if (user == null)
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
             {
-                return NotFound("User not found");
+                return Unauthorized(CreateResponse(false, "User not authenticated"));
             }
 
             var booking = await _context.Bookings
                 .Include(b => b.Apartment)
                 .FirstOrDefaultAsync(b =>
                     b.BookingID == id &&
-                    b.UserID == user.UserID &&
+                    b.UserID == userId.Value &&
                     b.BookingStatus == "Completed" &&
                     b.CheckOutDate < DateTime.Today);
 
             if (booking == null)
             {
-                return NotFound("Booking not found or not eligible for review");
+                return NotFound(CreateResponse(false, "Booking not found or not eligible for review"));
             }
 
             // Check if review already exists
@@ -243,7 +243,7 @@ namespace ChabbyNb_API.Controllers
 
             if (existingReview != null)
             {
-                return BadRequest("Review already exists for this booking");
+                return BadRequest(CreateResponse(false, "Review already exists for this booking"));
             }
 
             var reviewInfo = new ReviewDto
@@ -267,23 +267,21 @@ namespace ChabbyNb_API.Controllers
                 return BadRequest(ModelState);
             }
 
-            var userEmail = User.Identity.Name;
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
-
-            if (user == null)
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
             {
-                return NotFound("User not found");
+                return Unauthorized(CreateResponse(false, "User not authenticated"));
             }
 
             // Check if booking belongs to user
             var booking = await _context.Bookings
                 .FirstOrDefaultAsync(b =>
                     b.BookingID == model.BookingID &&
-                    b.UserID == user.UserID);
+                    b.UserID == userId.Value);
 
             if (booking == null)
             {
-                return NotFound("Booking not found");
+                return NotFound(CreateResponse(false, "Booking not found"));
             }
 
             // Check if review already exists
@@ -292,14 +290,14 @@ namespace ChabbyNb_API.Controllers
 
             if (existingReview != null)
             {
-                return BadRequest("Review already exists for this booking");
+                return BadRequest(CreateResponse(false, "Review already exists for this booking"));
             }
 
             // Create new review
             var review = new Review
             {
                 BookingID = model.BookingID,
-                UserID = user.UserID,
+                UserID = userId.Value,
                 ApartmentID = model.ApartmentID,
                 Rating = model.Rating,
                 Comment = model.Comment,
@@ -316,22 +314,20 @@ namespace ChabbyNb_API.Controllers
         [HttpGet("Reviews/{id}")]
         public async Task<IActionResult> GetReview(int id)
         {
-            var userEmail = User.Identity.Name;
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
-
-            if (user == null)
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
             {
-                return NotFound("User not found");
+                return Unauthorized(CreateResponse(false, "User not authenticated"));
             }
 
             var review = await _context.Reviews
                 .Include(r => r.Booking)
                 .Include(r => r.Apartment)
-                .FirstOrDefaultAsync(r => r.ReviewID == id && r.UserID == user.UserID);
+                .FirstOrDefaultAsync(r => r.ReviewID == id && r.UserID == userId.Value);
 
             if (review == null)
             {
-                return NotFound("Review not found");
+                return NotFound(CreateResponse(false, "Review not found"));
             }
 
             var reviewDto = new ReviewDto
@@ -358,20 +354,18 @@ namespace ChabbyNb_API.Controllers
                 return BadRequest(ModelState);
             }
 
-            var userEmail = User.Identity.Name;
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
-
-            if (user == null)
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
             {
-                return NotFound("User not found");
+                return Unauthorized(CreateResponse(false, "User not authenticated"));
             }
 
             var review = await _context.Reviews
-                .FirstOrDefaultAsync(r => r.ReviewID == id && r.UserID == user.UserID);
+                .FirstOrDefaultAsync(r => r.ReviewID == id && r.UserID == userId.Value);
 
             if (review == null)
             {
-                return NotFound("Review not found");
+                return NotFound(CreateResponse(false, "Review not found"));
             }
 
             // Update review
@@ -392,48 +386,54 @@ namespace ChabbyNb_API.Controllers
                 return BadRequest(ModelState);
             }
 
-            var userEmail = User.Identity.Name;
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
+            {
+                return Unauthorized(CreateResponse(false, "User not authenticated"));
+            }
 
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == userId.Value);
             if (user == null)
             {
-                return NotFound("User not found");
+                return NotFound(CreateResponse(false, "User not found"));
             }
 
-            // Handle pet image upload
-            string imageUrl = null;
-            if (model.PetImage != null && model.PetImage.Length > 0)
+            try
             {
-                // Save the file
-                string uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "images", "pets");
-                string uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(model.PetImage.FileName);
-                string filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                // Ensure directory exists
-                Directory.CreateDirectory(uploadsFolder);
-
-                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                // Handle pet image upload
+                string imageUrl = null;
+                if (model.PetImage != null && model.PetImage.Length > 0)
                 {
-                    await model.PetImage.CopyToAsync(fileStream);
+                    // Save the file
+                    string uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "images", "pets");
+                    string uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(model.PetImage.FileName);
+                    string filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                    // Ensure directory exists
+                    Directory.CreateDirectory(uploadsFolder);
+
+                    using (var fileStream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await model.PetImage.CopyToAsync(fileStream);
+                    }
+
+                    imageUrl = "/images/pets/" + uniqueFileName;
                 }
 
-                imageUrl = "/images/pets/" + uniqueFileName;
-            }
-
-            // In a real application, we would store this pet information
-            // For now, just return success message
-            return Ok(new
-            {
-                success = true,
-                message = "Pet profile added successfully!",
-                petInfo = new
+                // In a real application, we would store this pet information
+                // For now, just return success message
+                return Ok(CreateResponse(true, "Pet profile added successfully!", new
                 {
                     name = model.Name,
                     type = model.Type,
                     breed = model.Breed,
                     imageUrl = imageUrl
-                }
-            });
+                }));
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "Error adding pet profile");
+            }
         }
     }
 }
