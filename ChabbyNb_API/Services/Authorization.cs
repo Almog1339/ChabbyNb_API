@@ -87,7 +87,7 @@ namespace ChabbyNb_API.Authorization
                 if (requirement is HousekeepingRequirement housekeepingReq)
                 {
                     if (context.User.HasClaim(c => c.Type == ClaimTypes.Role &&
-                        (c.Value == UserRole.HousekeepingStaff.ToString() || c.Value == UserRole.Admin.ToString())))
+                        (c.Value == UserRole.CleaningStaff.ToString() || c.Value == UserRole.Admin.ToString())))
                     {
                         context.Succeed(requirement);
                     }
@@ -121,8 +121,7 @@ namespace ChabbyNb_API.Authorization
                 if (requirement is ReadOnlyRequirement readOnlyReq)
                 {
                     if (context.User.HasClaim(c => c.Type == ClaimTypes.Role &&
-                        (c.Value == UserRole.ReadOnlyStaff.ToString() ||
-                         c.Value == UserRole.HousekeepingStaff.ToString() ||
+                        (c.Value == UserRole.CleaningStaff.ToString() ||
                          c.Value == UserRole.Admin.ToString())))
                     {
                         context.Succeed(requirement);

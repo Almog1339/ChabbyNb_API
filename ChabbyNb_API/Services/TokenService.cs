@@ -23,41 +23,37 @@ namespace ChabbyNb_API.Services.Auth
     {
         private readonly ChabbyNbDbContext _context;
         private readonly IConfiguration _configuration;
-        private readonly IRoleService _roleService;
         private readonly ILogger<TokenService> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
         public TokenService(
             ChabbyNbDbContext context,
             IConfiguration configuration,
-            IRoleService roleService,
             ILogger<TokenService> logger,
             IHttpContextAccessor httpContextAccessor)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-            _roleService = roleService ?? throw new ArgumentNullException(nameof(roleService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
         }
 
-        /// <inheritdoc />
-        public async Task<TokenResult> GenerateTokensAsync(User user)
+        /// <summary>
+        /// Generates both access token and refresh token for a user
+        /// </summary>
+        public async Task<TokenResult> GenerateTokensAsync(User user, IEnumerable<string> roles)
         {
             if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
 
-            // Get user roles
-            var roles = await _roleService.GetUserRolesAsync(user.UserID);
-
             // Get settings from configuration
             var jwtKey = _configuration["Jwt:Key"];
             var jwtIssuer = _configuration["Jwt:Issuer"];
             var jwtAudience = _configuration["Jwt:Audience"];
-            var accessTokenExpiryMinutes = _configuration.GetValue<int>("Jwt:AccessTokenExpiryInMinutes", 60); // 1 hour by default
-            var refreshTokenExpiryDays = _configuration.GetValue<int>("Jwt:RefreshTokenExpiryInDays", 7); // 7 days by default
+            var accessTokenExpiryMinutes = _configuration.GetValue<int>("Jwt:AccessTokenExpiryInMinutes", 60);
+            var refreshTokenExpiryDays = _configuration.GetValue<int>("Jwt:RefreshTokenExpiryInDays", 7);
 
             if (string.IsNullOrEmpty(jwtKey) || string.IsNullOrEmpty(jwtIssuer) || string.IsNullOrEmpty(jwtAudience))
             {
@@ -79,9 +75,10 @@ namespace ChabbyNb_API.Services.Auth
             // Add role claims
             foreach (var role in roles)
             {
-                claims.Add(new Claim(ClaimTypes.Role, role.ToString()));
+                claims.Add(new Claim(ClaimTypes.Role, role));
             }
 
+            // Add name claims if available
             if (!string.IsNullOrEmpty(user.FirstName))
                 claims.Add(new Claim(ClaimTypes.GivenName, user.FirstName));
 
@@ -119,14 +116,14 @@ namespace ChabbyNb_API.Services.Auth
                 IssuedAt = DateTime.UtcNow,
                 ExpiresAt = refreshTokenExpiration,
                 IsRevoked = false,
-                CreatedByIp = GetIpAddress()
+                CreatedByIp = GetClientIpAddress()
             };
 
             _context.RefreshTokens.Add(tokenEntity);
             await _context.SaveChangesAsync();
 
             // Track user login for security monitoring
-            await TrackUserLogin(user.UserID, GetIpAddress(), tokenEntity.Token);
+            await TrackUserLogin(user.UserID, GetClientIpAddress(), tokenEntity.Token);
 
             return new TokenResult
             {
@@ -137,7 +134,9 @@ namespace ChabbyNb_API.Services.Auth
             };
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Refreshes an access token using a refresh token
+        /// </summary>
         public async Task<TokenResult> RefreshTokenAsync(string refreshToken, string accessToken)
         {
             if (string.IsNullOrEmpty(refreshToken) || string.IsNullOrEmpty(accessToken))
@@ -188,31 +187,41 @@ namespace ChabbyNb_API.Services.Auth
                 throw new SecurityTokenException("User not found");
             }
 
+            // Extract roles from the existing token
+            var roles = principal.FindAll(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
+
             // Revoke the current refresh token
             storedToken.IsRevoked = true;
             storedToken.RevokedAt = DateTime.UtcNow;
-            storedToken.RevokedByIp = GetIpAddress();
+            storedToken.RevokedByIp = GetClientIpAddress();
             storedToken.ReplacedByToken = "Pending generation";
 
             _context.RefreshTokens.Update(storedToken);
             await _context.SaveChangesAsync();
 
             // Generate new tokens
-            var tokenResult = await GenerateTokensAsync(user);
+            var tokenResult = await GenerateTokensAsync(user, roles);
 
             // Update the replaced by token reference
             storedToken.ReplacedByToken = tokenResult.RefreshToken;
             await _context.SaveChangesAsync();
 
             // Track token refresh for security monitoring
-            await TrackTokenRefresh(userId, storedToken.Token, tokenResult.RefreshToken, GetIpAddress());
+            await TrackTokenRefresh(userId, storedToken.Token, tokenResult.RefreshToken, GetClientIpAddress());
 
             return tokenResult;
         }
 
-        /// <inheritdoc />
-        public async Task<bool> RevokeRefreshTokenAsync(string refreshToken)
+        /// <summary>
+        /// Revokes a refresh token
+        /// </summary>
+        public async Task<bool> RevokeTokenAsync(string refreshToken)
         {
+            if (string.IsNullOrEmpty(refreshToken))
+            {
+                return false;
+            }
+
             var storedToken = await _context.RefreshTokens
                 .FirstOrDefaultAsync(t => t.Token == refreshToken);
 
@@ -231,20 +240,22 @@ namespace ChabbyNb_API.Services.Auth
             // Revoke the token
             storedToken.IsRevoked = true;
             storedToken.RevokedAt = DateTime.UtcNow;
-            storedToken.RevokedByIp = GetIpAddress();
+            storedToken.RevokedByIp = GetClientIpAddress();
             storedToken.ReasonRevoked = "Explicit revocation";
 
             _context.RefreshTokens.Update(storedToken);
             await _context.SaveChangesAsync();
 
             // Track token revocation for security monitoring
-            await TrackTokenRevocation(storedToken.UserId, refreshToken, GetIpAddress());
+            await TrackTokenRevocation(storedToken.UserId, refreshToken, GetClientIpAddress());
             _logger.LogInformation($"Token {refreshToken.Substring(0, 10)}... revoked for user {storedToken.UserId}");
 
             return true;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Revokes all refresh tokens for a user
+        /// </summary>
         public async Task<bool> RevokeAllUserTokensAsync(int userId)
         {
             var activeTokens = await _context.RefreshTokens
@@ -261,20 +272,22 @@ namespace ChabbyNb_API.Services.Auth
             {
                 token.IsRevoked = true;
                 token.RevokedAt = DateTime.UtcNow;
-                token.RevokedByIp = GetIpAddress();
+                token.RevokedByIp = GetClientIpAddress();
                 token.ReasonRevoked = "Administrative action - all tokens revoked";
             }
 
             await _context.SaveChangesAsync();
 
             // Track for security monitoring
-            await TrackAllTokensRevocation(userId, GetIpAddress());
+            await TrackAllTokensRevocation(userId, GetClientIpAddress());
             _logger.LogInformation($"All {activeTokens.Count} tokens revoked for user {userId}");
 
             return true;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Validates an access token
+        /// </summary>
         public bool ValidateAccessToken(string token, out ClaimsPrincipal principal)
         {
             principal = null;
@@ -380,7 +393,7 @@ namespace ChabbyNb_API.Services.Auth
             return Convert.ToBase64String(randomBytes);
         }
 
-        private string GetIpAddress()
+        private string GetClientIpAddress()
         {
             if (_httpContextAccessor.HttpContext == null)
             {
@@ -411,8 +424,7 @@ namespace ChabbyNb_API.Services.Auth
             return ip;
         }
 
-        // -- Security monitoring methods --
-
+        // Security monitoring methods
         private async Task TrackUserLogin(int userId, string ipAddress, string tokenId)
         {
             try

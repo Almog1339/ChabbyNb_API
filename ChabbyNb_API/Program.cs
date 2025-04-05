@@ -79,10 +79,13 @@ builder.Services.AddScoped<IPaymentService, StripePaymentService>();
 
 // Add our new authentication services
 builder.Services.AddHttpContextAccessor(); // Add this line to register IHttpContextAccessor
+builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAccountLockoutService, AccountLockoutService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAccountLockoutService, AccountLockoutService>();
-builder.Services.AddScoped<JwtTokenService>();
+
 
 // Register authorization handlers
 builder.Services.AddScoped<IAuthorizationHandler, RoleAuthorizationHandler>();
@@ -161,10 +164,10 @@ builder.Services.AddAuthorization(options =>
         policy.AddRequirements(new RoleAuthorizationRequirement(UserRole.Admin)));
 
     options.AddPolicy("RequireHousekeepingRoleMin", policy =>
-        policy.AddRequirements(new RoleAuthorizationRequirement(UserRole.HousekeepingStaff)));
+        policy.AddRequirements(new RoleAuthorizationRequirement(UserRole.CleaningStaff)));
 
     options.AddPolicy("RequireReadOnlyRoleMin", policy =>
-        policy.AddRequirements(new RoleAuthorizationRequirement(UserRole.ReadOnlyStaff)));
+        policy.AddRequirements(new RoleAuthorizationRequirement(UserRole.CleaningStaff)));
 });
 
 // Add CORS policy

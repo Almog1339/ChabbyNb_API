@@ -1,11 +1,11 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using ChabbyNb_API.Models.DTOs;
-using ChabbyNb_API.Services.Interfaces;
+using ChabbyNb_API.Services;
+using ChabbyNb_API.Services.Auth;
 using System.Security.Claims;
 using Microsoft.Extensions.Logging;
 
@@ -29,16 +29,12 @@ namespace ChabbyNb_API.Controllers
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        // POST: api/Account/Login
+        /// <summary>
+        /// Login with email/password or reservation number
+        /// </summary>
         [HttpPost("Login")]
         public async Task<ActionResult<LoginResultDto>> Login([FromBody] LoginDto model)
         {
-            // Custom validation to ensure either password or reservation number is provided
-            if (!model.IsValid())
-            {
-                return BadRequest(new { error = "Either Password or Reservation Number is required." });
-            }
-
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
@@ -51,18 +47,24 @@ namespace ChabbyNb_API.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return StatusCode(403, new { error = ex.Message });
+                return StatusCode(401, new { error = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during login");
-                return StatusCode(500, new { error = "An error occurred during login." });
+                return StatusCode(500, new { error = "An error occurred during login" });
             }
         }
 
-        // POST: api/Account/RefreshToken
+        /// <summary>
+        /// Refresh an authentication token
+        /// </summary>
         [HttpPost("RefreshToken")]
-        public async Task<ActionResult<LoginResultDto>> RefreshToken([FromBody] RefreshTokenDto refreshRequest)
+        public async Task<ActionResult<LoginResultDto>> RefreshToken([FromBody] RefreshTokenDto model)
         {
             if (!ModelState.IsValid)
             {
@@ -71,22 +73,27 @@ namespace ChabbyNb_API.Controllers
 
             try
             {
-                var result = await _userService.RefreshTokenAsync(refreshRequest);
+                var result = await _userService.RefreshTokenAsync(model);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
             {
-                _logger.LogWarning(ex, "Invalid refresh token attempt");
-                return Unauthorized(new { error = ex.Message });
+                return StatusCode(401, new { error = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during token refresh");
+                _logger.LogError(ex, "Error refreshing token");
                 return StatusCode(500, new { error = "An error occurred while refreshing the token" });
             }
         }
 
-        // POST: api/Account/Logout
+        /// <summary>
+        /// Logout user
+        /// </summary>
         [HttpPost("Logout")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> Logout([FromBody] LogoutDto model)
@@ -94,16 +101,19 @@ namespace ChabbyNb_API.Controllers
             try
             {
                 await _userService.LogoutAsync(model);
-                return Ok(new { success = true, message = "You have been logged out successfully." });
+                return Ok(new { success = true, message = "Logged out successfully" });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during logout");
-                return Ok(new { success = true, message = "You have been logged out successfully, but there was an error revoking your refresh token." });
+                // Still return success even if token revocation fails
+                return Ok(new { success = true, message = "Logged out successfully" });
             }
         }
 
-        // POST: api/Account/Register
+        /// <summary>
+        /// Register a new user
+        /// </summary>
         [HttpPost("Register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto model)
         {
@@ -115,6 +125,7 @@ namespace ChabbyNb_API.Controllers
             try
             {
                 var user = await _userService.RegisterAsync(model);
+
                 return Ok(new
                 {
                     success = true,
@@ -127,14 +138,20 @@ namespace ChabbyNb_API.Controllers
             {
                 return BadRequest(new { error = ex.Message });
             }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during registration");
-                return StatusCode(500, new { error = "An error occurred during registration." });
+                return StatusCode(500, new { error = "An error occurred during registration" });
             }
         }
 
-        // PUT: api/Account/Profile
+        /// <summary>
+        /// Update user profile
+        /// </summary>
         [HttpPut("Profile")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> UpdateProfile([FromBody] ProfileDto model)
@@ -144,20 +161,20 @@ namespace ChabbyNb_API.Controllers
                 return BadRequest(ModelState);
             }
 
-            int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-
             try
             {
+                int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
                 var user = await _userService.UpdateProfileAsync(userId, model);
+
                 return Ok(new
                 {
                     success = true,
-                    message = "Profile updated successfully.",
-                    user = new
+                    message = "Profile updated successfully",
+                    data = new
                     {
                         userId = user.UserID,
-                        email = user.Email,
                         username = user.Username,
+                        email = user.Email,
                         firstName = user.FirstName,
                         lastName = user.LastName,
                         phoneNumber = user.PhoneNumber
@@ -171,11 +188,13 @@ namespace ChabbyNb_API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating profile");
-                return StatusCode(500, new { error = "An error occurred while updating your profile." });
+                return StatusCode(500, new { error = "An error occurred while updating your profile" });
             }
         }
 
-        // PUT: api/Account/ChangePassword
+        /// <summary>
+        /// Change password
+        /// </summary>
         [HttpPut("ChangePassword")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto model)
@@ -185,25 +204,35 @@ namespace ChabbyNb_API.Controllers
                 return BadRequest(ModelState);
             }
 
-            int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-
             try
             {
+                int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
                 await _userService.ChangePasswordAsync(userId, model);
-                return Ok(new { success = true, message = "Password changed successfully. Please log in again with your new password." });
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Password changed successfully. Please log in again with your new password."
+                });
             }
             catch (UnauthorizedAccessException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (InvalidOperationException ex)
             {
                 return BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error changing password");
-                return StatusCode(500, new { error = "An error occurred while changing your password." });
+                return StatusCode(500, new { error = "An error occurred while changing your password" });
             }
         }
 
-        // POST: api/Account/ForgotPassword
+        /// <summary>
+        /// Initiate password reset
+        /// </summary>
         [HttpPost("ForgotPassword")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto model)
         {
@@ -217,17 +246,27 @@ namespace ChabbyNb_API.Controllers
                 await _userService.InitiatePasswordResetAsync(model.Email);
 
                 // Don't reveal whether the user exists
-                return Ok(new { success = true, message = "If your email is registered, you will receive a password reset link shortly." });
+                return Ok(new
+                {
+                    success = true,
+                    message = "If your email is registered, you will receive a password reset link shortly."
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error initiating password reset");
                 // Still return OK to not reveal whether the email exists
-                return Ok(new { success = true, message = "If your email is registered, you will receive a password reset link shortly." });
+                return Ok(new
+                {
+                    success = true,
+                    message = "If your email is registered, you will receive a password reset link shortly."
+                });
             }
         }
 
-        // POST: api/Account/ResetPassword
+        /// <summary>
+        /// Complete password reset
+        /// </summary>
         [HttpPost("ResetPassword")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto model)
         {
@@ -239,43 +278,122 @@ namespace ChabbyNb_API.Controllers
             try
             {
                 await _userService.ResetPasswordAsync(model);
-                return Ok(new { success = true, message = "Password has been reset successfully. You can now log in with your new password." });
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Password has been reset successfully. You can now log in with your new password."
+                });
             }
-            catch (UnauthorizedAccessException ex)
+            catch (InvalidOperationException ex)
             {
                 return BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error resetting password");
-                return StatusCode(500, new { error = "An error occurred while resetting your password." });
+                return StatusCode(500, new { error = "An error occurred while resetting your password" });
             }
         }
 
-        // GET: api/Account/Roles
+        /// <summary>
+        /// Verify email
+        /// </summary>
+        [HttpGet("VerifyEmail")]
+        public async Task<IActionResult> VerifyEmail([FromQuery] string email, [FromQuery] string token)
+        {
+            if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(token))
+            {
+                return BadRequest(new { error = "Email and token are required" });
+            }
+
+            try
+            {
+                bool success = await _userService.VerifyEmailAsync(email, token);
+
+                if (success)
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "Email verified successfully. You can now log in."
+                    });
+                }
+                else
+                {
+                    return BadRequest(new { error = "Invalid or expired verification token" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error verifying email");
+                return StatusCode(500, new { error = "An error occurred while verifying your email" });
+            }
+        }
+
+        /// <summary>
+        /// Resend verification email
+        /// </summary>
+        [HttpPost("ResendVerification")]
+        public async Task<IActionResult> ResendVerification([FromBody] ForgotPasswordDto model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                await _userService.ResendVerificationEmailAsync(model.Email);
+
+                // Don't reveal whether the user exists
+                return Ok(new
+                {
+                    success = true,
+                    message = "If your email is registered and not verified, you will receive a verification email shortly."
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resending verification email");
+                // Still return OK to not reveal whether the email exists
+                return Ok(new
+                {
+                    success = true,
+                    message = "If your email is registered and not verified, you will receive a verification email shortly."
+                });
+            }
+        }
+
+        #region Role Management (Admin Only)
+
+        /// <summary>
+        /// Get current user's roles
+        /// </summary>
         [HttpGet("Roles")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        public async Task<ActionResult<IEnumerable<string>>> GetUserRoles()
+        public async Task<IActionResult> GetUserRoles()
         {
             try
             {
                 int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
                 var roles = await _roleService.GetUserRolesAsync(userId);
+
                 return Ok(roles);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving user roles");
-                return StatusCode(500, new { error = "An error occurred while retrieving user roles" });
+                _logger.LogError(ex, "Error getting user roles");
+                return StatusCode(500, new { error = "An error occurred while retrieving roles" });
             }
         }
 
-        // ROLE MANAGEMENT ENDPOINTS (ADMIN ONLY)
-
-        // GET: api/Account/Users/{userId}/Roles
+        /// <summary>
+        /// Get roles for a specific user (Admin only)
+        /// </summary>
         [HttpGet("Users/{userId}/Roles")]
-        [Authorize(Policy = "RequireAdminRole")]
-        public async Task<ActionResult<IEnumerable<string>>> GetUserRolesById(int userId)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetRolesForUser(int userId)
         {
             try
             {
@@ -290,14 +408,16 @@ namespace ChabbyNb_API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error retrieving roles for user {userId}");
-                return StatusCode(500, new { error = "An error occurred while retrieving user roles" });
+                _logger.LogError(ex, $"Error getting roles for user {userId}");
+                return StatusCode(500, new { error = "An error occurred while retrieving roles" });
             }
         }
 
-        // POST: api/Account/Users/{userId}/Roles
+        /// <summary>
+        /// Assign role to user (Admin only)
+        /// </summary>
         [HttpPost("Users/{userId}/Roles")]
-        [Authorize(Policy = "RequireAdminRole")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AssignRoleToUser(int userId, [FromBody] AssignRoleDto model)
         {
             if (!ModelState.IsValid)
@@ -313,23 +433,20 @@ namespace ChabbyNb_API.Controllers
                     return NotFound(new { error = "User not found" });
                 }
 
-                // Don't allow assigning Admin role through this endpoint for security
-                if (model.Role == "Admin")
+                bool success = await _roleService.AssignRoleToUserAsync(userId, model.Role);
+
+                if (success)
                 {
-                    var isCurrentUserSuperAdmin = User.HasClaim(c => c.Type == "IsSuperAdmin" && c.Value == "True");
-                    if (!isCurrentUserSuperAdmin)
+                    return Ok(new
                     {
-                        return Forbid();
-                    }
+                        success = true,
+                        message = $"Role '{model.Role}' assigned to user successfully"
+                    });
                 }
-
-                var success = await _roleService.AssignRoleToUserAsync(userId, model.Role);
-                if (!success)
+                else
                 {
-                    return StatusCode(500, new { error = "Failed to assign role" });
+                    return BadRequest(new { error = "Failed to assign role" });
                 }
-
-                return Ok(new { success = true, message = $"Role {model.Role} assigned to user successfully" });
             }
             catch (ArgumentException ex)
             {
@@ -342,9 +459,11 @@ namespace ChabbyNb_API.Controllers
             }
         }
 
-        // DELETE: api/Account/Users/{userId}/Roles/{role}
+        /// <summary>
+        /// Remove role from user (Admin only)
+        /// </summary>
         [HttpDelete("Users/{userId}/Roles/{role}")]
-        [Authorize(Policy = "RequireAdminRole")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> RemoveRoleFromUser(int userId, string role)
         {
             try
@@ -355,23 +474,20 @@ namespace ChabbyNb_API.Controllers
                     return NotFound(new { error = "User not found" });
                 }
 
-                // Don't allow removing Admin role through this endpoint for security
-                if (role == "Admin")
+                bool success = await _roleService.RemoveRoleFromUserAsync(userId, role);
+
+                if (success)
                 {
-                    var isCurrentUserSuperAdmin = User.HasClaim(c => c.Type == "IsSuperAdmin" && c.Value == "True");
-                    if (!isCurrentUserSuperAdmin)
+                    return Ok(new
                     {
-                        return Forbid();
-                    }
+                        success = true,
+                        message = $"Role '{role}' removed from user successfully"
+                    });
                 }
-
-                var success = await _roleService.RemoveRoleFromUserAsync(userId, role);
-                if (!success)
+                else
                 {
-                    return StatusCode(500, new { error = "Failed to remove role" });
+                    return BadRequest(new { error = "Failed to remove role" });
                 }
-
-                return Ok(new { success = true, message = $"Role {role} removed from user successfully" });
             }
             catch (ArgumentException ex)
             {
@@ -384,14 +500,16 @@ namespace ChabbyNb_API.Controllers
             }
         }
 
-        // GET: api/Account/Roles/{role}/Users
+        /// <summary>
+        /// Get users with a specific role (Admin only)
+        /// </summary>
         [HttpGet("Roles/{role}/Users")]
-        [Authorize(Policy = "RequireAdminRole")]
-        public async Task<ActionResult<IEnumerable<UserDto>>> GetUsersInRole(string role)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetUsersInRole(string role)
         {
             try
             {
-                var users = await _roleService.GetUsersInRoleAsync(role);
+                var users = await _userService.GetUsersByRoleAsync(role);
                 return Ok(users);
             }
             catch (ArgumentException ex)
@@ -400,100 +518,30 @@ namespace ChabbyNb_API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error retrieving users in role {role}");
+                _logger.LogError(ex, $"Error getting users with role {role}");
                 return StatusCode(500, new { error = "An error occurred while retrieving users" });
             }
         }
 
-        // ACCOUNT LOCKOUT MANAGEMENT (ADMIN ONLY)
-
-        // GET: api/Account/Users/{userId}/LockoutStatus
-        [HttpGet("Users/{userId}/LockoutStatus")]
-        [Authorize(Policy = "RequireAdminRole")]
-        public async Task<IActionResult> GetUserLockoutStatus(int userId)
+        /// <summary>
+        /// Get all available roles (Admin only)
+        /// </summary>
+        [HttpGet("Roles/All")]
+        [Authorize(Roles = "Admin")]
+        public IActionResult GetAllRoles()
         {
             try
             {
-                var lockoutStatus = await _userService.GetUserLockoutStatusAsync(userId);
-                return Ok(lockoutStatus);
-            }
-            catch (ArgumentException ex)
-            {
-                return NotFound(new { error = ex.Message });
+                var roles = _roleService.GetAllRoles();
+                return Ok(roles);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error retrieving lockout status for user {userId}");
-                return StatusCode(500, new { error = "An error occurred while retrieving lockout status" });
+                _logger.LogError(ex, "Error getting all roles");
+                return StatusCode(500, new { error = "An error occurred while retrieving roles" });
             }
         }
 
-        // POST: api/Account/Users/{userId}/Lock
-        [HttpPost("Users/{userId}/Lock")]
-        [Authorize(Policy = "RequireAdminRole")]
-        public async Task<IActionResult> LockUserAccount(int userId, [FromBody] LockAccountDto model)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            try
-            {
-                var success = await _userService.LockUserAccountAsync(userId, model);
-                if (!success)
-                {
-                    return StatusCode(500, new { error = "Failed to lock account" });
-                }
-
-                return Ok(new { success = true, message = "Account locked successfully" });
-            }
-            catch (ArgumentException ex)
-            {
-                return NotFound(new { error = ex.Message });
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Forbid();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error locking account for user {userId}");
-                return StatusCode(500, new { error = "An error occurred while locking the account" });
-            }
-        }
-
-        // POST: api/Account/Users/{userId}/Unlock
-        [HttpPost("Users/{userId}/Unlock")]
-        [Authorize(Policy = "RequireAdminRole")]
-        public async Task<IActionResult> UnlockUserAccount(int userId, [FromBody] UnlockAccountDto model)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            try
-            {
-                int adminId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-                var success = await _userService.UnlockUserAccountAsync(userId, model, adminId);
-
-                if (!success)
-                {
-                    return StatusCode(500, new { error = "Failed to unlock account" });
-                }
-
-                return Ok(new { success = true, message = "Account unlocked successfully" });
-            }
-            catch (ArgumentException ex)
-            {
-                return NotFound(new { error = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error unlocking account for user {userId}");
-                return StatusCode(500, new { error = "An error occurred while unlocking the account" });
-            }
-        }
+        #endregion
     }
 }

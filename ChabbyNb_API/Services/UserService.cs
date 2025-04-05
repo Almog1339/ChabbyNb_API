@@ -4,477 +4,801 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using ChabbyNb_API.Models;
-using ChabbyNb_API.Models.DTOs;
-using ChabbyNb_API.Repositories;
-using ChabbyNb_API.Services.Auth;
-using ChabbyNb_API.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using ChabbyNb_API.Data;
+using ChabbyNb_API.Models;
+using ChabbyNb_API.Models.DTOs;
+using ChabbyNb_API.Services.Auth;
+using ChabbyNb_API.Services.Iterfaces;
 
 namespace ChabbyNb_API.Services
 {
+    /// <summary>
+    /// Interface for the user service
+    /// </summary>
+    public interface IUserService
+    {
+        /// <summary>
+        /// Gets a user by their ID
+        /// </summary>
+        Task<User> GetUserByIdAsync(int userId);
+
+        /// <summary>
+        /// Gets a user by their email
+        /// </summary>
+        Task<User> GetUserByEmailAsync(string email);
+
+        /// <summary>
+        /// Authenticates a user with email and password
+        /// </summary>
+        Task<LoginResultDto> AuthenticateAsync(LoginDto loginDto);
+
+        /// <summary>
+        /// Authenticates a user with a reservation number
+        /// </summary>
+        Task<LoginResultDto> AuthenticateWithReservationAsync(string email, string reservationNumber);
+
+        /// <summary>
+        /// Refreshes an authentication token
+        /// </summary>
+        Task<LoginResultDto> RefreshTokenAsync(RefreshTokenDto refreshDto);
+
+        /// <summary>
+        /// Logs out a user
+        /// </summary>
+        Task<bool> LogoutAsync(LogoutDto logoutDto);
+
+        /// <summary>
+        /// Registers a new user
+        /// </summary>
+        Task<User> RegisterAsync(RegisterDto registerDto);
+
+        /// <summary>
+        /// Updates a user's profile
+        /// </summary>
+        Task<User> UpdateProfileAsync(int userId, ProfileDto profileDto);
+
+        /// <summary>
+        /// Changes a user's password
+        /// </summary>
+        Task<bool> ChangePasswordAsync(int userId, ChangePasswordDto changePasswordDto);
+
+        /// <summary>
+        /// Initiates a password reset
+        /// </summary>
+        Task<bool> InitiatePasswordResetAsync(string email);
+
+        /// <summary>
+        /// Completes a password reset
+        /// </summary>
+        Task<bool> ResetPasswordAsync(ResetPasswordDto resetDto);
+
+        /// <summary>
+        /// Gets all users with pagination
+        /// </summary>
+        Task<(IEnumerable<UserDto> Users, int TotalCount)> GetAllUsersAsync(int page = 1, int pageSize = 10);
+
+        /// <summary>
+        /// Gets users by role
+        /// </summary>
+        Task<IEnumerable<UserDto>> GetUsersByRoleAsync(string role);
+
+        /// <summary>
+        /// Verifies a user's email
+        /// </summary>
+        Task<bool> VerifyEmailAsync(string email, string token);
+
+        /// <summary>
+        /// Re-sends the verification email
+        /// </summary>
+        Task<bool> ResendVerificationEmailAsync(string email);
+    }
+
     /// <summary>
     /// Implementation of the user service
     /// </summary>
     public class UserService : IUserService
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly JwtTokenService _jwtTokenService;
-        private readonly IAccountLockoutService _lockoutService;
+        private readonly ChabbyNbDbContext _context;
+        private readonly ITokenService _tokenService;
         private readonly IRoleService _roleService;
         private readonly IEmailService _emailService;
+        private readonly IAccountLockoutService _lockoutService;
         private readonly ILogger<UserService> _logger;
 
         public UserService(
-            IUnitOfWork unitOfWork,
-            JwtTokenService jwtTokenService,
-            IAccountLockoutService lockoutService,
+            ChabbyNbDbContext context,
+            ITokenService tokenService,
             IRoleService roleService,
             IEmailService emailService,
+            IAccountLockoutService lockoutService,
             ILogger<UserService> logger)
         {
-            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-            _jwtTokenService = jwtTokenService ?? throw new ArgumentNullException(nameof(jwtTokenService));
-            _lockoutService = lockoutService ?? throw new ArgumentNullException(nameof(lockoutService));
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _tokenService = tokenService ?? throw new ArgumentNullException(nameof(tokenService));
             _roleService = roleService ?? throw new ArgumentNullException(nameof(roleService));
             _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
+            _lockoutService = lockoutService ?? throw new ArgumentNullException(nameof(lockoutService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
+        /// <summary>
+        /// Gets a user by their ID
+        /// </summary>
         public async Task<User> GetUserByIdAsync(int userId)
         {
-            return await _unitOfWork.Users.GetByIdAsync(userId);
+            return await _context.Users.FindAsync(userId);
         }
 
+        /// <summary>
+        /// Gets a user by their email
+        /// </summary>
         public async Task<User> GetUserByEmailAsync(string email)
         {
-            return await _unitOfWork.Users.GetByEmailAsync(email);
+            if (string.IsNullOrEmpty(email))
+            {
+                return null;
+            }
+
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
         }
 
+        /// <summary>
+        /// Authenticates a user with email and password
+        /// </summary>
         public async Task<LoginResultDto> AuthenticateAsync(LoginDto loginDto)
         {
-            // Custom validation
-            if (!loginDto.IsValid())
+            // Email is always required for authentication
+            if (string.IsNullOrEmpty(loginDto.Email))
             {
-                throw new ArgumentException("Either Password or Reservation Number is required.");
+                throw new ArgumentException("Email is required");
+            }
+
+            // Custom validation for password or reservation
+            if (string.IsNullOrEmpty(loginDto.Password) && string.IsNullOrEmpty(loginDto.ReservationNumber))
+            {
+                throw new ArgumentException("Either Password or Reservation Number is required");
             }
 
             // Check if account is locked out
             if (await _lockoutService.IsAccountLockedOutAsync(loginDto.Email))
             {
-                throw new UnauthorizedAccessException("This account is temporarily locked due to too many failed login attempts. Please try again later or contact support.");
+                throw new UnauthorizedAccessException("This account is temporarily locked. Please try again later or contact support.");
             }
 
-            User user = null;
-            var ipAddress = GetClientIpAddress();
+            string ipAddress = "127.0.0.1"; // In a real implementation, get from HttpContext
 
-            // Check if user is trying to login with password
+            // Handle login with password
             if (!string.IsNullOrEmpty(loginDto.Password))
             {
-                // Hash the password for comparison
-                string hashedPassword = HashPassword(loginDto.Password);
-
-                // Validate credentials
-                user = await _unitOfWork.Users.ValidateCredentialsAsync(loginDto.Email, hashedPassword);
+                var hashedPassword = HashPassword(loginDto.Password);
+                var user = await _context.Users.FirstOrDefaultAsync(u =>
+                    u.Email.ToLower() == loginDto.Email.ToLower() &&
+                    u.PasswordHash == hashedPassword);
 
                 if (user == null)
                 {
                     // Record failed login attempt
                     await _lockoutService.RecordFailedLoginAttemptAsync(loginDto.Email, ipAddress);
-                    throw new UnauthorizedAccessException("Invalid login credentials.");
+                    throw new UnauthorizedAccessException("Invalid email or password");
                 }
 
                 if (!user.IsEmailVerified)
                 {
-                    throw new UnauthorizedAccessException("Your email address has not been verified. Please check your email for verification link.");
+                    throw new UnauthorizedAccessException("Please verify your email before logging in");
                 }
-            }
-            // Check if user is trying to login with reservation number
-            else if (!string.IsNullOrEmpty(loginDto.ReservationNumber))
-            {
-                // Find user by reservation
-                user = await _unitOfWork.Users.FindByReservationAsync(loginDto.Email, loginDto.ReservationNumber);
 
-                if (user == null)
+                // Record successful login
+                await _lockoutService.RecordSuccessfulLoginAsync(user.UserID);
+
+                // Get user roles
+                var roles = await _roleService.GetUserRolesAsync(user.UserID);
+
+                // Generate tokens
+                var tokenResult = await _tokenService.GenerateTokensAsync(user, roles);
+
+                // Create login result
+                return new LoginResultDto
                 {
-                    // Record failed login attempt
-                    await _lockoutService.RecordFailedLoginAttemptAsync(loginDto.Email, ipAddress);
-                    throw new UnauthorizedAccessException("Invalid reservation number or email address.");
-                }
+                    Success = true,
+                    Message = "Login successful",
+                    Token = tokenResult.AccessToken,
+                    RefreshToken = tokenResult.RefreshToken,
+                    TokenExpiration = tokenResult.AccessTokenExpiration,
+                    UserId = user.UserID,
+                    Email = user.Email,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    IsAdmin = user.IsAdmin,
+                    Roles = roles.ToList()
+                };
             }
-
-            if (user == null)
+            else
             {
-                // This should not happen based on validations above
-                await _lockoutService.RecordFailedLoginAttemptAsync(loginDto.Email, ipAddress);
-                throw new UnauthorizedAccessException("Invalid login attempt.");
+                // Handle login with reservation number
+                return await AuthenticateWithReservationAsync(loginDto.Email, loginDto.ReservationNumber);
             }
-
-            // Record successful login
-            await _lockoutService.RecordSuccessfulLoginAsync(user.UserID);
-
-            // Generate tokens (JWT + refresh token)
-            var tokenResult = await _jwtTokenService.GenerateTokensAsync(user);
-
-            // Get user roles
-            var roles = await _roleService.GetUserRolesAsync(user.UserID);
-
-            return new LoginResultDto
-            {
-                Success = true,
-                Token = tokenResult.AccessToken,
-                RefreshToken = tokenResult.RefreshToken,
-                TokenExpiration = tokenResult.AccessTokenExpiration,
-                UserId = user.UserID,
-                Email = user.Email,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                IsAdmin = user.IsAdmin,
-                Roles = roles
-            };
         }
 
-        public async Task<LoginResultDto> RefreshTokenAsync(RefreshTokenDto refreshDto)
+        /// <summary>
+        /// Authenticates a user with a reservation number
+        /// </summary>
+        public async Task<LoginResultDto> AuthenticateWithReservationAsync(string email, string reservationNumber)
         {
-            // Attempt to refresh the token
-            var tokenResult = await _jwtTokenService.RefreshTokenAsync(
-                refreshDto.RefreshToken,
-                refreshDto.AccessToken);
-
-            if (tokenResult == null)
+            if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(reservationNumber))
             {
-                throw new UnauthorizedAccessException("Invalid token");
+                throw new ArgumentException("Email and reservation number are required");
             }
 
-            // Extract user ID from the new token using JwtSecurityTokenHandler
-            var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
-            var jwtToken = handler.ReadJwtToken(tokenResult.AccessToken);
-            var userIdClaim = jwtToken.Claims.First(claim => claim.Type == System.Security.Claims.ClaimTypes.NameIdentifier).Value;
-
-            if (!int.TryParse(userIdClaim, out int userId))
-            {
-                throw new UnauthorizedAccessException("Invalid token format");
-            }
-
-            // Get user information
-            var user = await _unitOfWork.Users.GetByIdAsync(userId);
-            if (user == null)
-            {
-                throw new UnauthorizedAccessException("User not found");
-            }
-
-            // Get user roles
-            var roles = await _roleService.GetUserRolesAsync(userId);
-
-            return new LoginResultDto
-            {
-                Success = true,
-                Token = tokenResult.AccessToken,
-                RefreshToken = tokenResult.RefreshToken,
-                TokenExpiration = tokenResult.AccessTokenExpiration,
-                UserId = user.UserID,
-                Email = user.Email,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                IsAdmin = user.IsAdmin,
-                Roles = roles
-            };
-        }
-
-        public async Task<bool> LogoutAsync(LogoutDto logoutDto)
-        {
-            // With JWT, we don't need to do anything server-side for basic logout
-            // But we can revoke the refresh token for better security
-            if (!string.IsNullOrEmpty(logoutDto.RefreshToken))
-            {
-                await _jwtTokenService.RevokeTokenAsync(logoutDto.RefreshToken);
-            }
-
-            return true;
-        }
-
-        public async Task<User> RegisterAsync(RegisterDto registerDto)
-        {
-            // Validate email and username uniqueness
-            bool emailExists = await _unitOfWork.Users.EmailExistsAsync(registerDto.Email);
-            if (emailExists)
-            {
-                throw new InvalidOperationException("Email address is already registered.");
-            }
-
-            bool usernameExists = await _unitOfWork.Users.UsernameExistsAsync(registerDto.Username);
-            if (usernameExists)
-            {
-                throw new InvalidOperationException("Username is already taken.");
-            }
-
-            // Create new user
-            var user = new User
-            {
-                Username = registerDto.Username,
-                Email = registerDto.Email,
-                PasswordHash = HashPassword(registerDto.Password),
-                FirstName = registerDto.FirstName,
-                LastName = registerDto.LastName,
-                PhoneNumber = registerDto.PhoneNumber,
-                IsAdmin = false,
-                CreatedDate = DateTime.Now,
-                IsEmailVerified = false // Require email verification
-            };
-
-            // Use a transaction
-            await _unitOfWork.BeginTransactionAsync();
+            string ipAddress = "127.0.0.1"; // In a real implementation, get from HttpContext
 
             try
             {
-                // Add user
-                await _unitOfWork.Users.AddAsync(user);
-
-                // Create email verification token
-                var verification = new EmailVerification
+                // First find the user by email
+                var user = await GetUserByEmailAsync(email);
+                if (user == null)
                 {
-                    UserID = user.UserID,
+                    // Record failed login attempt
+                    await _lockoutService.RecordFailedLoginAttemptAsync(email, ipAddress);
+                    throw new UnauthorizedAccessException("Invalid email or reservation number");
+                }
+
+                // Then find the booking by reservation number and verify it belongs to the user
+                var booking = await _context.Bookings
+                    .FirstOrDefaultAsync(b =>
+                        b.ReservationNumber == reservationNumber &&
+                        b.UserID == user.UserID);
+
+                if (booking == null)
+                {
+                    // Record failed login attempt
+                    await _lockoutService.RecordFailedLoginAttemptAsync(email, ipAddress);
+                    throw new UnauthorizedAccessException("Invalid email or reservation number");
+                }
+
+                // Record successful login
+                await _lockoutService.RecordSuccessfulLoginAsync(user.UserID);
+
+                // Get user roles
+                var roles = await _roleService.GetUserRolesAsync(user.UserID);
+
+                // Generate tokens
+                var tokenResult = await _tokenService.GenerateTokensAsync(user, roles);
+
+                // Create login result
+                return new LoginResultDto
+                {
+                    Success = true,
+                    Message = "Login successful",
+                    Token = tokenResult.AccessToken,
+                    RefreshToken = tokenResult.RefreshToken,
+                    TokenExpiration = tokenResult.AccessTokenExpiration,
+                    UserId = user.UserID,
                     Email = user.Email,
-                    VerificationToken = GenerateToken(32),
-                    ExpiryDate = DateTime.Now.AddDays(3),
-                    IsVerified = false,
-                    CreatedDate = DateTime.Now
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    IsAdmin = user.IsAdmin,
+                    Roles = roles.ToList()
                 };
-
-                // Here you would typically add the verification record,
-                // but we don't have a verification repository defined yet
-                // await _unitOfWork.EmailVerifications.AddAsync(verification);
-
-                // Assign default role (Guest)
-                await _unitOfWork.Roles.AssignRoleToUserAsync(user.UserID, UserRole.Guest);
-
-                await _unitOfWork.CommitTransactionAsync();
-
-                // Send verification email
-                await SendVerificationEmailAsync(user, verification.VerificationToken);
-
-                return user;
             }
-            catch
+            catch (UnauthorizedAccessException)
             {
-                await _unitOfWork.RollbackTransactionAsync();
+                throw; // Rethrow specific unauthorized exceptions
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error during reservation authentication: {ex.Message}");
+                throw new UnauthorizedAccessException("Authentication failed");
+            }
+        }
+
+        /// <summary>
+        /// Refreshes an authentication token
+        /// </summary>
+        public async Task<LoginResultDto> RefreshTokenAsync(RefreshTokenDto refreshDto)
+        {
+            if (refreshDto == null || string.IsNullOrEmpty(refreshDto.AccessToken) || string.IsNullOrEmpty(refreshDto.RefreshToken))
+            {
+                throw new ArgumentException("Access token and refresh token are required");
+            }
+
+            try
+            {
+                // Use the token service to refresh the tokens
+                var tokenResult = await _tokenService.RefreshTokenAsync(refreshDto.RefreshToken, refreshDto.AccessToken);
+
+                // Extract user ID from the claims in the new token
+                var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+                var jwtToken = handler.ReadJwtToken(tokenResult.AccessToken);
+                var userIdClaim = jwtToken.Claims.First(claim => claim.Type == System.Security.Claims.ClaimTypes.NameIdentifier).Value;
+
+                if (!int.TryParse(userIdClaim, out int userId))
+                {
+                    throw new InvalidOperationException("Invalid user ID in token");
+                }
+
+                // Get the user
+                var user = await GetUserByIdAsync(userId);
+                if (user == null)
+                {
+                    throw new InvalidOperationException("User not found");
+                }
+
+                // Get roles from the claims in the token
+                var roles = jwtToken.Claims
+                    .Where(c => c.Type == System.Security.Claims.ClaimTypes.Role)
+                    .Select(c => c.Value)
+                    .ToList();
+
+                // Create login result
+                return new LoginResultDto
+                {
+                    Success = true,
+                    Message = "Token refreshed successfully",
+                    Token = tokenResult.AccessToken,
+                    RefreshToken = tokenResult.RefreshToken,
+                    TokenExpiration = tokenResult.AccessTokenExpiration,
+                    UserId = user.UserID,
+                    Email = user.Email,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    IsAdmin = user.IsAdmin,
+                    Roles = roles
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error refreshing token: {ex.Message}");
                 throw;
             }
         }
 
-        public async Task<User> UpdateProfileAsync(int userId, ProfileDto profileDto)
+        /// <summary>
+        /// Logs out a user
+        /// </summary>
+        public async Task<bool> LogoutAsync(LogoutDto logoutDto)
         {
-            var user = await _unitOfWork.Users.GetByIdAsync(userId);
-            if (user == null)
+            if (logoutDto == null)
             {
-                throw new ArgumentException("User not found");
+                return false;
             }
 
-            // Check if username is changed and already exists
-            if (user.Username != profileDto.Username)
+            // If a refresh token was provided, revoke it
+            if (!string.IsNullOrEmpty(logoutDto.RefreshToken))
             {
-                bool usernameExists = await _unitOfWork.Users.UsernameExistsAsync(profileDto.Username);
-                if (usernameExists)
+                return await _tokenService.RevokeTokenAsync(logoutDto.RefreshToken);
+            }
+
+            // Nothing to do if no refresh token was provided
+            return true;
+        }
+
+        /// <summary>
+        /// Registers a new user
+        /// </summary>
+        public async Task<User> RegisterAsync(RegisterDto registerDto)
+        {
+            if (registerDto == null)
+            {
+                throw new ArgumentNullException(nameof(registerDto));
+            }
+
+            // Validate required fields
+            if (string.IsNullOrEmpty(registerDto.Email) || string.IsNullOrEmpty(registerDto.Password))
+            {
+                throw new ArgumentException("Email and password are required");
+            }
+
+            // Check if email already exists
+            var existingUser = await GetUserByEmailAsync(registerDto.Email);
+            if (existingUser != null)
+            {
+                throw new InvalidOperationException("A user with this email already exists");
+            }
+
+            // Check if username already exists
+            if (!string.IsNullOrEmpty(registerDto.Username))
+            {
+                var existingUsername = await _context.Users
+                    .AnyAsync(u => u.Username.ToLower() == registerDto.Username.ToLower());
+
+                if (existingUsername)
                 {
-                    throw new InvalidOperationException("Username is already taken.");
+                    throw new InvalidOperationException("This username is already taken");
                 }
             }
 
-            // Update properties
-            user.Username = profileDto.Username;
-            user.FirstName = profileDto.FirstName;
-            user.LastName = profileDto.LastName;
-            user.PhoneNumber = profileDto.PhoneNumber;
+            // Create the user
+            var newUser = new User
+            {
+                Email = registerDto.Email,
+                Username = registerDto.Username ?? registerDto.Email, // Use email as username if not provided
+                PasswordHash = HashPassword(registerDto.Password),
+                FirstName = registerDto.FirstName,
+                LastName = registerDto.LastName,
+                PhoneNumber = registerDto.PhoneNumber,
+                IsAdmin = false, // New users are never admins
+                CreatedDate = DateTime.UtcNow,
+                IsEmailVerified = false // Require email verification
+            };
 
-            // Save changes
-            await _unitOfWork.Users.UpdateAsync(user);
-            await _unitOfWork.SaveChangesAsync();
+            // Start a transaction
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // Add the user
+                _context.Users.Add(newUser);
+                await _context.SaveChangesAsync();
+
+                // Create email verification token
+                string verificationToken = GenerateToken(32);
+                var verification = new EmailVerification
+                {
+                    UserID = newUser.UserID,
+                    Email = newUser.Email,
+                    VerificationToken = verificationToken,
+                    ExpiryDate = DateTime.UtcNow.AddDays(3),
+                    IsVerified = false,
+                    CreatedDate = DateTime.UtcNow
+                };
+
+                _context.EmailVerifications.Add(verification);
+                await _context.SaveChangesAsync();
+
+                // Assign default customer role
+                await _roleService.AssignRoleToUserAsync(newUser.UserID, UserRole.Guest.ToString());
+
+                // Commit the transaction
+                await transaction.CommitAsync();
+
+                // Send verification email
+                await SendVerificationEmailAsync(newUser, verificationToken);
+
+                return newUser;
+            }
+            catch (Exception ex)
+            {
+                // Roll back the transaction on error
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, $"Error registering user: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Updates a user's profile
+        /// </summary>
+        public async Task<User> UpdateProfileAsync(int userId, ProfileDto profileDto)
+        {
+            if (profileDto == null)
+            {
+                throw new ArgumentNullException(nameof(profileDto));
+            }
+
+            var user = await GetUserByIdAsync(userId);
+            if (user == null)
+            {
+                throw new InvalidOperationException("User not found");
+            }
+
+            // Check if username is changed and already exists
+            if (!string.IsNullOrEmpty(profileDto.Username) &&
+                profileDto.Username != user.Username)
+            {
+                var existingUsername = await _context.Users
+                    .AnyAsync(u => u.Username.ToLower() == profileDto.Username.ToLower() && u.UserID != userId);
+
+                if (existingUsername)
+                {
+                    throw new InvalidOperationException("This username is already taken");
+                }
+            }
+
+            // Update user properties
+            user.Username = profileDto.Username ?? user.Username;
+            user.FirstName = profileDto.FirstName ?? user.FirstName;
+            user.LastName = profileDto.LastName ?? user.LastName;
+            user.PhoneNumber = profileDto.PhoneNumber ?? user.PhoneNumber;
+
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
 
             return user;
         }
 
+        /// <summary>
+        /// Changes a user's password
+        /// </summary>
         public async Task<bool> ChangePasswordAsync(int userId, ChangePasswordDto changePasswordDto)
         {
-            var user = await _unitOfWork.Users.GetByIdAsync(userId);
+            if (changePasswordDto == null)
+            {
+                throw new ArgumentNullException(nameof(changePasswordDto));
+            }
+
+            var user = await GetUserByIdAsync(userId);
             if (user == null)
             {
-                throw new ArgumentException("User not found");
+                throw new InvalidOperationException("User not found");
             }
 
             // Verify current password
-            string currentPasswordHash = HashPassword(changePasswordDto.CurrentPassword);
-            if (user.PasswordHash != currentPasswordHash)
+            string hashedCurrentPassword = HashPassword(changePasswordDto.CurrentPassword);
+            if (user.PasswordHash != hashedCurrentPassword)
             {
                 throw new UnauthorizedAccessException("Current password is incorrect");
             }
 
             // Update password
             user.PasswordHash = HashPassword(changePasswordDto.NewPassword);
-            await _unitOfWork.Users.UpdateAsync(user);
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
 
-            // Revoke all tokens to force re-login
-            await _jwtTokenService.RevokeAllUserTokensAsync(userId);
+            // Revoke all refresh tokens for security
+            await _tokenService.RevokeAllUserTokensAsync(userId);
 
             return true;
         }
 
+        /// <summary>
+        /// Initiates a password reset
+        /// </summary>
         public async Task<bool> InitiatePasswordResetAsync(string email)
         {
-            var user = await _unitOfWork.Users.GetByEmailAsync(email);
+            if (string.IsNullOrEmpty(email))
+            {
+                return false;
+            }
+
+            var user = await GetUserByEmailAsync(email);
             if (user == null)
             {
                 // Don't reveal that the user doesn't exist
-                return false;
+                _logger.LogWarning($"Password reset attempted for non-existent email: {email}");
+                return true;
             }
 
             // Generate reset token
             string token = GenerateToken(32);
-            DateTime expiryTime = DateTime.Now.AddHours(1);
 
-            // Create or update reset entry
-            var tempPwd = new Tempwd
+            // Create or update temporary password entry
+            var tempPassword = await _context.Tempwds
+                .FirstOrDefaultAsync(t => t.UserID == user.UserID && !t.IsUsed);
+
+            if (tempPassword == null)
             {
-                UserID = user.UserID,
-                Token = token,
-                ExperationTime = expiryTime,
-                IsUsed = false
-            };
+                // Create new entry
+                tempPassword = new Tempwd
+                {
+                    UserID = user.UserID,
+                    Token = token,
+                    ExperationTime = DateTime.UtcNow.AddHours(24),
+                    IsUsed = false
+                };
+                _context.Tempwds.Add(tempPassword);
+            }
+            else
+            {
+                // Update existing entry
+                tempPassword.Token = token;
+                tempPassword.ExperationTime = DateTime.UtcNow.AddHours(24);
+                tempPassword.IsUsed = false;
+                _context.Tempwds.Update(tempPassword);
+            }
 
-            // Here you would typically add or update the tempwd record,
-            // but we don't have a tempwd repository defined yet
-            // await _unitOfWork.TempPasswords.AddOrUpdateAsync(tempPwd);
+            await _context.SaveChangesAsync();
 
-            // Send reset email
+            // Send password reset email
             await SendPasswordResetEmailAsync(user, token);
 
             return true;
         }
 
+        /// <summary>
+        /// Completes a password reset
+        /// </summary>
         public async Task<bool> ResetPasswordAsync(ResetPasswordDto resetDto)
         {
-            var user = await _unitOfWork.Users.GetByEmailAsync(resetDto.Email);
+            if (resetDto == null || string.IsNullOrEmpty(resetDto.Email) ||
+                string.IsNullOrEmpty(resetDto.Token) || string.IsNullOrEmpty(resetDto.Password))
+            {
+                throw new ArgumentException("Email, token, and new password are required");
+            }
+
+            var user = await GetUserByEmailAsync(resetDto.Email);
             if (user == null)
             {
-                throw new UnauthorizedAccessException("Invalid reset information");
+                throw new InvalidOperationException("Invalid email or token");
             }
 
             // Verify token
-            // Here you would typically validate the token from the tempwd repository,
-            // but we don't have a tempwd repository defined yet
-            // var tempPwd = await _unitOfWork.TempPasswords.ValidateTokenAsync(user.UserID, resetDto.Token);
-            // if (tempPwd == null || tempPwd.IsUsed || tempPwd.ExperationTime < DateTime.Now)
-            // {
-            //     throw new UnauthorizedAccessException("Invalid or expired reset token");
-            // }
+            var tempPassword = await _context.Tempwds
+                .FirstOrDefaultAsync(t =>
+                    t.UserID == user.UserID &&
+                    t.Token == resetDto.Token &&
+                    !t.IsUsed &&
+                    t.ExperationTime > DateTime.UtcNow);
+
+            if (tempPassword == null)
+            {
+                throw new InvalidOperationException("Invalid or expired password reset token");
+            }
 
             // Update password
             user.PasswordHash = HashPassword(resetDto.Password);
-            await _unitOfWork.Users.UpdateAsync(user);
+            _context.Users.Update(user);
 
             // Mark token as used
-            // tempPwd.IsUsed = true;
-            // await _unitOfWork.TempPasswords.UpdateAsync(tempPwd);
+            tempPassword.IsUsed = true;
+            _context.Tempwds.Update(tempPassword);
 
-            // Revoke all tokens
-            await _jwtTokenService.RevokeAllUserTokensAsync(user.UserID);
+            await _context.SaveChangesAsync();
+
+            // Revoke all refresh tokens for security
+            await _tokenService.RevokeAllUserTokensAsync(user.UserID);
 
             return true;
         }
 
+        /// <summary>
+        /// Gets all users with pagination
+        /// </summary>
         public async Task<(IEnumerable<UserDto> Users, int TotalCount)> GetAllUsersAsync(int page = 1, int pageSize = 10)
         {
+            // Ensure valid pagination parameters
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 10;
+            if (pageSize > 100) pageSize = 100;
+
             // Calculate skip count
             int skip = (page - 1) * pageSize;
 
-            // Get total count (excluding admins if not an admin)
-            int totalCount = await _unitOfWork.Users.CountAsync(u => !u.IsAdmin);
+            // Get total count
+            int totalCount = await _context.Users.CountAsync();
 
-            // Get paged results
-            var users = await _unitOfWork.Users.GetAsync(u => !u.IsAdmin);
-            var pagedUsers = users.Skip(skip).Take(pageSize);
+            // Get paged users
+            var users = await _context.Users
+                .OrderBy(u => u.UserID)
+                .Skip(skip)
+                .Take(pageSize)
+                .Select(u => new UserDto
+                {
+                    UserId = u.UserID,
+                    Username = u.Username,
+                    Email = u.Email,
+                    FirstName = u.FirstName,
+                    LastName = u.LastName,
+                    IsAdmin = u.IsAdmin
+                })
+                .ToListAsync();
 
-            // Map to DTOs
-            var userDtos = pagedUsers.Select(u => new UserDto
-            {
-                UserId = u.UserID,
-                Username = u.Username,
-                Email = u.Email,
-                FirstName = u.FirstName,
-                LastName = u.LastName,
-                IsAdmin = u.IsAdmin
-            });
-
-            return (userDtos, totalCount);
+            return (users, totalCount);
         }
 
-        public async Task<bool> LockUserAccountAsync(int userId, LockAccountDto lockAccountDto)
+        /// <summary>
+        /// Gets users by role
+        /// </summary>
+        public async Task<IEnumerable<UserDto>> GetUsersByRoleAsync(string role)
         {
-            var user = await _unitOfWork.Users.GetByIdAsync(userId);
-            if (user == null)
-            {
-                throw new ArgumentException("User not found");
-            }
-
-            // Don't allow locking admin accounts unless you're a super admin
-            if (user.IsAdmin)
-            {
-                throw new UnauthorizedAccessException("Cannot lock admin accounts");
-            }
-
-            // Lock the account
-            bool success = await _lockoutService.LockoutAccountAsync(
-                userId,
-                lockAccountDto.Reason,
-                GetClientIpAddress(),
-                lockAccountDto.LockoutMinutes);
-
-            if (success)
-            {
-                // Revoke all tokens for this user
-                await _jwtTokenService.RevokeAllUserTokensAsync(userId);
-            }
-
-            return success;
+            return await _roleService.GetUsersInRoleAsync(role);
         }
 
-        public async Task<bool> UnlockUserAccountAsync(int userId, UnlockAccountDto unlockAccountDto, int adminId)
+        /// <summary>
+        /// Verifies a user's email
+        /// </summary>
+        public async Task<bool> VerifyEmailAsync(string email, string token)
         {
-            var user = await _unitOfWork.Users.GetByIdAsync(userId);
-            if (user == null)
+            if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(token))
             {
-                throw new ArgumentException("User not found");
+                return false;
             }
 
-            // Unlock the account
-            return await _lockoutService.UnlockAccountAsync(userId, adminId, unlockAccountDto.Notes);
+            var user = await GetUserByEmailAsync(email);
+            if (user == null)
+            {
+                return false;
+            }
+
+            var verification = await _context.EmailVerifications
+                .FirstOrDefaultAsync(v =>
+                    v.UserID == user.UserID &&
+                    v.VerificationToken == token &&
+                    !v.IsVerified &&
+                    v.ExpiryDate > DateTime.UtcNow);
+
+            if (verification == null)
+            {
+                return false;
+            }
+
+            // Mark as verified
+            verification.IsVerified = true;
+            verification.VerifiedDate = DateTime.UtcNow;
+            _context.EmailVerifications.Update(verification);
+
+            // Update user's email verification status
+            user.IsEmailVerified = true;
+            _context.Users.Update(user);
+
+            await _context.SaveChangesAsync();
+            return true;
         }
 
-        public async Task<object> GetUserLockoutStatusAsync(int userId)
+        /// <summary>
+        /// Re-sends the verification email
+        /// </summary>
+        public async Task<bool> ResendVerificationEmailAsync(string email)
         {
-            var user = await _unitOfWork.Users.GetByIdAsync(userId);
-            if (user == null)
+            if (string.IsNullOrEmpty(email))
             {
-                throw new ArgumentException("User not found");
+                return false;
             }
 
-            bool isLocked = await _lockoutService.IsAccountLockedOutAsync(userId);
-
-            // Get active lockout details if locked
-            // Here you would typically get the lockout details from the UserAccountLockout repository,
-            // but we don't have that repository defined yet
-
-            return new
+            var user = await GetUserByEmailAsync(email);
+            if (user == null)
             {
-                isLocked
-                // We would include other lockout details if the user is locked
-            };
+                // Don't reveal that the user doesn't exist
+                return true;
+            }
+
+            if (user.IsEmailVerified)
+            {
+                // Already verified
+                return true;
+            }
+
+            // Generate new token
+            string token = GenerateToken(32);
+
+            // Create or update verification entry
+            var verification = await _context.EmailVerifications
+                .FirstOrDefaultAsync(v => v.UserID == user.UserID && !v.IsVerified);
+
+            if (verification == null)
+            {
+                // Create new verification
+                verification = new EmailVerification
+                {
+                    UserID = user.UserID,
+                    Email = user.Email,
+                    VerificationToken = token,
+                    ExpiryDate = DateTime.UtcNow.AddDays(3),
+                    IsVerified = false,
+                    CreatedDate = DateTime.UtcNow
+                };
+                _context.EmailVerifications.Add(verification);
+            }
+            else
+            {
+                // Update existing verification
+                verification.VerificationToken = token;
+                verification.ExpiryDate = DateTime.UtcNow.AddDays(3);
+                _context.EmailVerifications.Update(verification);
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Send verification email
+            await SendVerificationEmailAsync(user, token);
+
+            return true;
         }
 
         #region Helper Methods
 
+        /// <summary>
+        /// Hashes a password using SHA256
+        /// </summary>
         private string HashPassword(string password)
         {
+            if (string.IsNullOrEmpty(password))
+            {
+                throw new ArgumentException("Password cannot be null or empty", nameof(password));
+            }
+
             using (var sha256 = SHA256.Create())
             {
                 var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
@@ -483,32 +807,94 @@ namespace ChabbyNb_API.Services
             }
         }
 
+        /// <summary>
+        /// Generates a random token
+        /// </summary>
         private string GenerateToken(int length)
         {
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
             var random = new Random();
-            return new string(Enumerable.Repeat(chars, length)
+            var token = new string(Enumerable.Repeat(chars, length)
                 .Select(s => s[random.Next(s.Length)]).ToArray());
+            return token;
         }
 
-        private string GetClientIpAddress()
-        {
-            // In a real implementation, this would get the IP from the HttpContext
-            // Since this is a service, we don't have direct access to HttpContext
-            // You would need to pass this from the controller
-            return "127.0.0.1";
-        }
-
+        /// <summary>
+        /// Sends a verification email
+        /// </summary>
         private async Task SendVerificationEmailAsync(User user, string token)
         {
-            // Here you would send an email with the verification token
-            // using the _emailService
+            if (user == null || string.IsNullOrEmpty(token))
+            {
+                return;
+            }
+
+            try
+            {
+                // Build verification URL
+                string baseUrl = "https://chabby.com"; // Get from configuration in real app
+                string verifyUrl = $"{baseUrl}/verify-email?email={Uri.EscapeDataString(user.Email)}&token={token}";
+
+                // Create email model
+                var model = new
+                {
+                    UserName = !string.IsNullOrEmpty(user.FirstName) ? user.FirstName : user.Username,
+                    VerificationLink = verifyUrl,
+                    ExpiryHours = 72 // 3 days in hours
+                };
+
+                // Send email
+                await _emailService.SendEmailAsync(
+                    user.Email,
+                    "Verify Your ChabbyNb Account",
+                    "EmailVerification",
+                    model
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error sending verification email to {user.Email}");
+                // Continue without throwing - verification can be re-sent later
+            }
         }
 
+        /// <summary>
+        /// Sends a password reset email
+        /// </summary>
         private async Task SendPasswordResetEmailAsync(User user, string token)
         {
-            // Here you would send an email with the reset token
-            // using the _emailService
+            if (user == null || string.IsNullOrEmpty(token))
+            {
+                return;
+            }
+
+            try
+            {
+                // Build reset URL
+                string baseUrl = "https://chabby.com"; // Get from configuration in real app
+                string resetUrl = $"{baseUrl}/reset-password?email={Uri.EscapeDataString(user.Email)}&token={token}";
+
+                // Create email model
+                var model = new
+                {
+                    UserName = !string.IsNullOrEmpty(user.FirstName) ? user.FirstName : user.Username,
+                    ResetLink = resetUrl,
+                    ExpiryHours = 24
+                };
+
+                // Send email
+                await _emailService.SendEmailAsync(
+                    user.Email,
+                    "Reset Your ChabbyNb Password",
+                    "PasswordReset",
+                    model
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error sending password reset email to {user.Email}");
+                // Continue without throwing - password reset can be re-initiated later
+            }
         }
 
         #endregion
