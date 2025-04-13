@@ -13,53 +13,64 @@ namespace ChabbyNb_API.Repositories
     /// <summary>
     /// Implementation of the role repository
     /// </summary>
-    public class RoleRepository : Repository<UserRoleAssignment>, IRoleRepository
+    public class RoleRepository : Repository<User>, IRoleRepository
     {
         public RoleRepository(ChabbyNbDbContext context) : base(context)
         {
         }
 
-        public async Task<IEnumerable<UserRoleAssignment>> GetUserRoleAssignmentsAsync(int userId)
+        public async Task<IEnumerable<string>> GetUserRolesAsync(int userId)
         {
-            return await _dbSet
-                .Where(r => r.UserId == userId)
-                .ToListAsync();
-        }
-
-        public async Task<UserRoleAssignment> GetRoleAssignmentAsync(int userId, UserRole role)
-        {
-            return await _dbSet
-                .FirstOrDefaultAsync(r => r.UserId == userId && r.Role == (int)role);
-        }
-
-        public async Task<UserRoleAssignment> AssignRoleToUserAsync(int userId, UserRole role)
-        {
-            // Check if user exists
             var user = await _context.Users.FindAsync(userId);
             if (user == null)
+                return Enumerable.Empty<string>();
+
+            var roles = new List<string>();
+
+            // Legacy admin system support
+            if (user.IsAdmin)
+                roles.Add(UserRole.Admin.ToString());
+
+            // Always add Guest role to registered users
+            roles.Add(UserRole.Guest.ToString());
+
+            return roles.Distinct();
+        }
+
+        public async Task<bool> HasRoleAsync(int userId, UserRole role)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                return false;
+
+            // For Admin role, check IsAdmin flag
+            if (role == UserRole.Admin)
+                return user.IsAdmin;
+
+            // Guest role is always available to registered users
+            if (role == UserRole.Guest)
+                return true;
+
+            // All other roles are not available by default
+            return false;
+        }
+
+        public async Task<bool> AssignRoleToUserAsync(int userId, UserRole role)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                return false;
+
+            // Special handling for Admin role
+            if (role == UserRole.Admin)
             {
-                throw new ArgumentException($"User with ID {userId} not found.");
+                user.IsAdmin = true;
+                await _context.SaveChangesAsync();
+                return true;
             }
 
-            // Check if the role assignment already exists
-            var existingRole = await GetRoleAssignmentAsync(userId, role);
-            if (existingRole != null)
-            {
-                return existingRole; // Role already assigned
-            }
-
-            // Create new role assignment
-            var roleAssignment = new UserRoleAssignment
-            {
-                UserId = userId,
-                Role = (int)role,
-                AssignedDate = DateTime.UtcNow
-            };
-
-            await _dbSet.AddAsync(roleAssignment);
-            await _context.SaveChangesAsync();
-
-            return roleAssignment;
+            // Other roles are handled implicitly (Guest is automatic)
+            return true;
         }
 
         public async Task<bool> RemoveRoleFromUserAsync(int userId, UserRole role)

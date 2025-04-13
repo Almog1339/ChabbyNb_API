@@ -8,14 +8,14 @@ namespace ChabbyNb_API.Repositories.Interface
     /// <summary>
     /// Repository interface for role-specific operations
     /// </summary>
-    public interface IRoleRepository : IRepository<UserRoleAssignment>
+    public interface IRoleRepository : IRepository<User>
     {
         /// <summary>
         /// Gets all roles assigned to a user
         /// </summary>
         /// <param name="userId">User ID</param>
         /// <returns>Collection of role assignments</returns>
-        Task<IEnumerable<UserRoleAssignment>> GetUserRoleAssignmentsAsync(int userId);
+        Task<IEnumerable<string>> GetUserRolesAsync(int userId);
 
         /// <summary>
         /// Gets a specific role assignment
@@ -23,7 +23,7 @@ namespace ChabbyNb_API.Repositories.Interface
         /// <param name="userId">User ID</param>
         /// <param name="role">Role enum value</param>
         /// <returns>Role assignment or null if not found</returns>
-        Task<UserRoleAssignment> GetRoleAssignmentAsync(int userId, UserRole role);
+        Task<bool> HasRoleAsync(int userId, UserRole role);
 
         /// <summary>
         /// Adds a role to a user
@@ -31,7 +31,7 @@ namespace ChabbyNb_API.Repositories.Interface
         /// <param name="userId">User ID</param>
         /// <param name="role">Role to assign</param>
         /// <returns>The created role assignment</returns>
-        Task<UserRoleAssignment> AssignRoleToUserAsync(int userId, UserRole role);
+        Task<bool> AssignRoleToUserAsync(int userId, UserRole role);
 
         /// <summary>
         /// Removes a role from a user

@@ -403,6 +403,7 @@ namespace ChabbyNb_API.Controllers
                     return NotFound(new { error = "User not found" });
                 }
 
+                // New code - use the RoleService directly
                 var roles = await _roleService.GetUserRolesAsync(userId);
                 return Ok(roles);
             }
@@ -474,6 +475,7 @@ namespace ChabbyNb_API.Controllers
                     return NotFound(new { error = "User not found" });
                 }
 
+                // New code - use the RoleService
                 bool success = await _roleService.RemoveRoleFromUserAsync(userId, role);
 
                 if (success)
