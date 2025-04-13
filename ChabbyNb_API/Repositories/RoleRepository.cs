@@ -13,10 +13,13 @@ namespace ChabbyNb_API.Repositories
     /// <summary>
     /// Implementation of the role repository
     /// </summary>
-    public class RoleRepository : Repository<User>, IRoleRepository
+    public class RoleRepository : IRoleRepository
     {
-        public RoleRepository(ChabbyNbDbContext context) : base(context)
+        private readonly ChabbyNbDbContext _context;
+
+        public RoleRepository(ChabbyNbDbContext context)
         {
+            _context = context;
         }
 
         public async Task<IEnumerable<string>> GetUserRolesAsync(int userId)
@@ -51,7 +54,7 @@ namespace ChabbyNb_API.Repositories
             if (role == UserRole.Guest)
                 return true;
 
-            // All other roles are not available by default
+            // Other roles are not available by default
             return false;
         }
 
@@ -75,55 +78,20 @@ namespace ChabbyNb_API.Repositories
 
         public async Task<bool> RemoveRoleFromUserAsync(int userId, UserRole role)
         {
-            var roleAssignment = await GetRoleAssignmentAsync(userId, role);
-            if (roleAssignment == null)
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                return false;
+
+            // Special handling for Admin role
+            if (role == UserRole.Admin)
             {
-                return false; // Role not assigned
-            }
-
-            _dbSet.Remove(roleAssignment);
-            return await _context.SaveChangesAsync() > 0;
-        }
-
-        public async Task<IEnumerable<User>> GetUsersInRoleAsync(UserRole role)
-        {
-            return await _dbSet
-                .Where(r => r.Role == (int)role)
-                .Join(_context.Users,
-                    userRole => userRole.UserId,
-                    user => user.UserID,
-                    (userRole, user) => user)
-                .ToListAsync();
-        }
-
-        public async Task<bool> UserHasRoleAsync(int userId, UserRole role)
-        {
-            // Special case for Guest role
-            if (role == UserRole.Guest)
-            {
+                user.IsAdmin = false;
+                await _context.SaveChangesAsync();
                 return true;
             }
 
-            return await _dbSet.AnyAsync(r => r.UserId == userId && r.Role == (int)role);
-        }
-
-        public async Task<UserRole> GetUserHighestRoleAsync(int userId)
-        {
-            // Check if user is an admin in the legacy system
-            var user = await _context.Users.FindAsync(userId);
-            if (user?.IsAdmin == true)
-            {
-                return UserRole.Admin;
-            }
-
-            // Get highest role from assignments
-            var roles = await GetUserRoleAssignmentsAsync(userId);
-            if (!roles.Any())
-            {
-                return UserRole.Guest; // Default role
-            }
-
-            return (UserRole)roles.Max(r => r.Role);
+            // Other roles cannot be removed (Guest is automatic)
+            return true;
         }
     }
 }
