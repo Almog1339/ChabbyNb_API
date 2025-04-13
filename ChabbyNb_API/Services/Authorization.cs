@@ -50,6 +50,15 @@ namespace ChabbyNb_API.Authorization
                 })
                 .ToList();
 
+            // Check the IsAdmin claim for backward compatibility
+            bool isAdmin = context.User.Claims
+                .Any(c => c.Type == "IsAdmin" && c.Value.Equals("True", StringComparison.OrdinalIgnoreCase));
+
+            if (isAdmin)
+            {
+                userRoleClaims.Add(UserRole.Admin);
+            }
+
             // Get the user's highest role
             var highestRole = userRoleClaims.Any() ? userRoleClaims.Max() : UserRole.Guest;
 

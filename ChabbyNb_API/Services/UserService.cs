@@ -378,6 +378,8 @@ namespace ChabbyNb_API.Services
         /// <summary>
         /// Registers a new user
         /// </summary>
+        // Modify the RegisterAsync method in UserService.cs to remove UserRoleAssignment references
+
         public async Task<User> RegisterAsync(RegisterDto registerDto)
         {
             if (registerDto == null)
