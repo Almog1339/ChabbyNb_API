@@ -23,21 +23,24 @@ namespace ChabbyNb_API.Controllers
     public class BookingsController : ControllerBase
     {
         private readonly ChabbyNbDbContext _context;
-        private readonly PriceCalculationService _priceService;
+        private readonly PricingService _priceService;
         private readonly IPaymentService _paymentService;
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
         private readonly ILogger<BookingsController> _logger;
+        private readonly ILogger<PricingService> _pricingServiceLogger;
 
-        public BookingsController(ChabbyNbDbContext context, IPaymentService paymentService, IConfiguration configuration, IEmailService emailService, ILogger<BookingsController> logger)
+        public BookingsController(ChabbyNbDbContext context,IPaymentService paymentService,IConfiguration configuration,IEmailService emailService,ILogger<BookingsController> logger,ILogger<PricingService> pricingServiceLogger) 
         {
             _context = context;
-            _priceService = new PriceCalculationService(context);
+            _logger = logger;
+            _pricingServiceLogger = pricingServiceLogger; // Assign the logger for PricingService
+            _priceService = new PricingService(context, pricingServiceLogger); // Use the correct logger type
             _paymentService = paymentService;
             _configuration = configuration;
             _emailService = emailService;
-            _logger = logger;
         }
+
 
         // GET: api/Bookings
         [HttpGet]
@@ -175,6 +178,7 @@ namespace ChabbyNb_API.Controllers
                     bookingDto.ApartmentID,
                     bookingDto.CheckInDate,
                     bookingDto.CheckOutDate,
+                    guestCount: bookingDto.GuestCount,
                     bookingDto.PetCount,
                     bookingDto.PromotionCode);
 
@@ -286,6 +290,7 @@ namespace ChabbyNb_API.Controllers
             [FromQuery] int apartmentId,
             [FromQuery] DateTime checkInDate,
             [FromQuery] DateTime checkOutDate,
+            [FromQuery] int guestCount = 1,
             [FromQuery] int petCount = 0,
             [FromQuery] string promotionCode = null)
         {
@@ -324,7 +329,7 @@ namespace ChabbyNb_API.Controllers
 
                 // Calculate price
                 var priceResult = await _priceService.CalculateBookingPriceAsync(
-                    apartmentId, checkInDate, checkOutDate, petCount, promotionCode);
+                    apartmentId, checkInDate, checkOutDate, guestCount, petCount, promotionCode);
 
                 return Ok(priceResult);
             }

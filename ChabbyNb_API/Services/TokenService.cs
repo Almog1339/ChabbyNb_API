@@ -528,5 +528,15 @@ namespace ChabbyNb_API.Services.Auth
                 // Don't throw - this is just for monitoring
             }
         }
+
+        Task<Iterfaces.TokenResult> ITokenService.GenerateTokensAsync(User user, IEnumerable<string> roles)
+        {
+            throw new NotImplementedException();
+        }
+
+        Task<Iterfaces.TokenResult> ITokenService.RefreshTokenAsync(string refreshToken, string accessToken)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

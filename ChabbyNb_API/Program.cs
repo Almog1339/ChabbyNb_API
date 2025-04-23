@@ -74,7 +74,7 @@ builder.Services.AddDbContext<ChabbyNbDbContext>(options =>
 // Add session services (we'll keep these for backward compatibility during transition)
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddScoped<IEmailService, EmailService>();
-builder.Services.AddScoped<IFileService, FileService>();
+builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddScoped<IPaymentService, StripePaymentService>();
 
 // Add our new authentication services

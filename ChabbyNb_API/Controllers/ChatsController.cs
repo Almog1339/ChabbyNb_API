@@ -19,10 +19,10 @@ public class ChatsController : ControllerBase
     private readonly IWebHostEnvironment _webHostEnvironment;
     private readonly IConfiguration _configuration;
     private readonly ILogger<ChatsController> _logger;
-    private readonly IFileService _fileService;
+    private readonly IFileStorageService _fileService;
     private readonly IEmailService _emailService;
 
-    public ChatsController(ChabbyNbDbContext context,IWebHostEnvironment webHostEnvironment,IConfiguration configuration,ILogger<ChatsController> logger,IFileService fileService,IEmailService emailService)
+    public ChatsController(ChabbyNbDbContext context,IWebHostEnvironment webHostEnvironment,IConfiguration configuration,ILogger<ChatsController> logger, IFileStorageService fileService,IEmailService emailService)
     {
         _context = context;
         _webHostEnvironment = webHostEnvironment;
@@ -279,13 +279,13 @@ public class ChatsController : ControllerBase
         if (dto.MediaFile != null && dto.MediaFile.Length > 0)
         {
             // Validate file (type, size, etc.)
-            if (!_fileService.IsValidMediaFile(dto.MediaFile))
+            if (!_fileService.ValidateFile(dto.MediaFile))
             {
                 return BadRequest(new { error = "Invalid file. Only images (jpg, png, gif) and videos (mp4) under 10MB are allowed." });
             }
 
             // Save the file using the file service
-            mediaUrl = await _fileService.SaveMediaFileAsync(dto.MediaFile, "uploads/chat/" + _fileService.GetContentType(dto.MediaFile) + "s");
+            mediaUrl = await _fileService.SaveFileAsync(dto.MediaFile, "uploads/chat/" + _fileService.GetContentType(dto.MediaFile) + "s");
             contentType = _fileService.GetContentType(dto.MediaFile);
         }
 

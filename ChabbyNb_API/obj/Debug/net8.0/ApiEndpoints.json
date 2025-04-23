@@ -1442,6 +1442,11 @@
         "IsRequired": false
       },
       {
+        "Name": "guestCount",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
         "Name": "petCount",
         "Type": "System.Int32",
         "IsRequired": false

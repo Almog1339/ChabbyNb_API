@@ -2495,6 +2495,15 @@
             }
           },
           {
+            "name": "guestCount",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
             "name": "petCount",
             "in": "query",
             "schema": {
@@ -5171,6 +5180,14 @@
             "type": "string",
             "format": "date-time"
           },
+          "guestCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "petCount": {
+            "type": "integer",
+            "format": "int32"
+          },
           "dailyPrices": {
             "type": "array",
             "items": {
@@ -5206,6 +5223,14 @@
             "type": "integer",
             "format": "int32",
             "nullable": true
+          },
+          "promotionMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "nightsCount": {
+            "type": "integer",
+            "format": "int32"
           }
         },
         "additionalProperties": false
