@@ -175,28 +175,33 @@
   },
   {
     "ContainingType": "ChabbyNb_API.Controllers.AccountController",
-    "Method": "GetUsersInRole",
-    "RelativePath": "api/Account/Roles/{role}/Users",
-    "HttpMethod": "GET",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "role",
-        "Type": "System.String",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "ChabbyNb_API.Controllers.AccountController",
     "Method": "GetAllRoles",
     "RelativePath": "api/Account/Roles/All",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
     "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.AccountController",
+    "Method": "SetUserPermissions",
+    "RelativePath": "api/Account/Users/{userId}/Permissions",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "userId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "model",
+        "Type": "ChabbyNb_API.Controllers.SetPermissionsDto",
+        "IsRequired": true
+      }
+    ],
     "ReturnTypes": []
   },
   {
@@ -218,7 +223,7 @@
   {
     "ContainingType": "ChabbyNb_API.Controllers.AccountController",
     "Method": "AssignRoleToUser",
-    "RelativePath": "api/Account/Users/{userId}/Roles",
+    "RelativePath": "api/Account/Users/{userId}/Roles/{role}",
     "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
@@ -229,8 +234,8 @@
         "IsRequired": true
       },
       {
-        "Name": "model",
-        "Type": "ChabbyNb_API.Models.DTOs.AssignRoleDto",
+        "Name": "role",
+        "Type": "System.String",
         "IsRequired": true
       }
     ],

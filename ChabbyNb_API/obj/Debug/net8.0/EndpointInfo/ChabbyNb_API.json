@@ -380,7 +380,9 @@
             "description": "OK"
           }
         }
-      },
+      }
+    },
+    "/api/Account/Users/{userId}/Roles/{role}": {
       "post": {
         "tags": [
           "Account"
@@ -394,35 +396,22 @@
               "type": "integer",
               "format": "int32"
             }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AssignRoleDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AssignRoleDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/AssignRoleDto"
-              }
+          },
+          {
+            "name": "role",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
           }
-        },
+        ],
         "responses": {
           "200": {
             "description": "OK"
           }
         }
-      }
-    },
-    "/api/Account/Users/{userId}/Roles/{role}": {
+      },
       "delete": {
         "tags": [
           "Account"
@@ -453,21 +442,41 @@
         }
       }
     },
-    "/api/Account/Roles/{role}/Users": {
-      "get": {
+    "/api/Account/Users/{userId}/Permissions": {
+      "post": {
         "tags": [
           "Account"
         ],
         "parameters": [
           {
-            "name": "role",
+            "name": "userId",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "integer",
+              "format": "int32"
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPermissionsDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPermissionsDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPermissionsDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK"
@@ -4951,19 +4960,6 @@
         },
         "additionalProperties": false
       },
-      "AssignRoleDto": {
-        "required": [
-          "role"
-        ],
-        "type": "object",
-        "properties": {
-          "role": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
-      },
       "Booking": {
         "required": [
           "bookingStatus",
@@ -6849,6 +6845,19 @@
           "priceChangeDisplay": {
             "type": "string",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SetPermissionsDto": {
+        "required": [
+          "permissions"
+        ],
+        "type": "object",
+        "properties": {
+          "permissions": {
+            "minLength": 1,
+            "type": "string"
           }
         },
         "additionalProperties": false

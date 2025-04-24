@@ -8,7 +8,6 @@ using Microsoft.OpenApi.Models;
 using ChabbyNb_API.Services;
 using ChabbyNb_API.Services.Auth;
 using Microsoft.AspNetCore.Authorization;
-using ChabbyNb_API.Authorization;
 using ChabbyNb_API.Services.Iterfaces;
 using System.Security.Claims;
 
@@ -79,11 +78,7 @@ builder.Services.AddScoped<IPaymentService, StripePaymentService>();
 
 // Add our new authentication services
 builder.Services.AddHttpContextAccessor(); // Add this line to register IHttpContextAccessor
-builder.Services.AddScoped<ITokenService, TokenService>();
-builder.Services.AddScoped<IRoleService, RoleService>();
-builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAccountLockoutService, AccountLockoutService>();
-builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAccountLockoutService, AccountLockoutService>();
 
 
@@ -95,7 +90,8 @@ builder.Services.AddScoped<IAuthorizationHandler, ReadOnlyAuthorizationHandler>(
 // Add background services
 builder.Services.AddHostedService<BookingExpirationService>();
 
-// Add session config
+// Add session (for backward compatibility)
+builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
@@ -146,28 +142,56 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization(options =>
 {
     // Legacy admin role policy
+    // User group policies
+    options.AddPolicy("RequireEveryone", policy => policy.RequireAssertion(_ => true));
+
+    options.AddPolicy("RequireGuest", policy =>
+        policy.AddRequirements(new RoleRequirement(UserRole.Guest)));
+
+    options.AddPolicy("RequireCleaningStaff", policy =>
+        policy.AddRequirements(new RoleRequirement(UserRole.CleaningStaff)));
+
+    options.AddPolicy("RequirePartner", policy =>
+        policy.AddRequirements(new RoleRequirement(UserRole.Partner)));
+
+    options.AddPolicy("RequireAdmin", policy =>
+        policy.AddRequirements(new RoleRequirement(UserRole.Admin)));
+
+    // Permission-based policies
+    options.AddPolicy("RequireReadPermission", policy =>
+        policy.AddRequirements(new PermissionRequirement(UserPermission.Read)));
+
+    options.AddPolicy("RequireWritePermission", policy =>
+        policy.AddRequirements(new PermissionRequirement(UserPermission.Write)));
+
+    options.AddPolicy("RequireExecutePermission", policy =>
+        policy.AddRequirements(new PermissionRequirement(UserPermission.Execute)));
+
+    options.AddPolicy("RequireReadWritePermission", policy =>
+        policy.AddRequirements(new PermissionRequirement(UserPermission.ReadWrite)));
+
+    options.AddPolicy("RequireFullPermission", policy =>
+        policy.AddRequirements(new PermissionRequirement(UserPermission.Full)));
+
+    // Combined policies
+    options.AddPolicy("PartnerWithReadPermission", policy =>
+        policy.AddRequirements(new RoleAndPermissionRequirement(UserRole.Partner, UserPermission.Read)));
+
+    options.AddPolicy("PartnerWithWritePermission", policy =>
+        policy.AddRequirements(new RoleAndPermissionRequirement(UserRole.Partner, UserPermission.Write)));
+
+    // Legacy policies (for backward compatibility)
     options.AddPolicy("RequireAdminRole", policy =>
         policy.RequireAssertion(context =>
             context.User.HasClaim(c =>
                 (c.Type == "IsAdmin" && c.Value == "True") ||
                 (c.Type == ClaimTypes.Role && c.Value == UserRole.Admin.ToString()))));
 
-    // New role-based policies
     options.AddPolicy("RequireHousekeepingRole", policy =>
         policy.AddRequirements(new HousekeepingRequirement()));
 
     options.AddPolicy("RequireReadOnlyRole", policy =>
         policy.AddRequirements(new ReadOnlyRequirement()));
-
-    // Minimum role level policies
-    options.AddPolicy("RequireAdminRoleNew", policy =>
-        policy.AddRequirements(new RoleAuthorizationRequirement(UserRole.Admin)));
-
-    options.AddPolicy("RequireHousekeepingRoleMin", policy =>
-        policy.AddRequirements(new RoleAuthorizationRequirement(UserRole.CleaningStaff)));
-
-    options.AddPolicy("RequireReadOnlyRoleMin", policy =>
-        policy.AddRequirements(new RoleAuthorizationRequirement(UserRole.CleaningStaff)));
 });
 
 // Add CORS policy
@@ -175,7 +199,8 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",
         policy => policy
-            .WithOrigins("http://localhost:3000")
+            .WithOrigins(builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ??
+                        new[] { "http://localhost:3000" })
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials());

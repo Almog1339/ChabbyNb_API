@@ -1,32 +1,28 @@
-using System;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using ChabbyNb_API.Data;
 using ChabbyNb_API.Models.DTOs;
-using ChabbyNb_API.Services;
 using ChabbyNb_API.Services.Auth;
-using System.Security.Claims;
-using Microsoft.Extensions.Logging;
+using ChabbyNb_API.Models;
+using ChabbyNb_API.Services;
+using ChabbyNb_API.Controllers;
+using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 
 namespace ChabbyNb_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AccountController : ControllerBase
+    public class AccountController : BaseApiController
     {
-        private readonly IUserService _userService;
-        private readonly IRoleService _roleService;
-        private readonly ILogger<AccountController> _logger;
+        private readonly IEmailService _emailService;
+        private readonly IConfiguration _configuration;
 
-        public AccountController(
-            IUserService userService,
-            IRoleService roleService,
-            ILogger<AccountController> logger)
+        public AccountController(ChabbyNbDbContext context,IEmailService emailService,ILogger<AccountController> logger,IConfiguration configuration)
+            : base(context, logger)
         {
-            _userService = userService ?? throw new ArgumentNullException(nameof(userService));
-            _roleService = roleService ?? throw new ArgumentNullException(nameof(roleService));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -37,26 +33,36 @@ namespace ChabbyNb_API.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                // Change the return type to match ActionResult<LoginResultDto>
+                return BadRequest(new LoginResultDto
+                {
+                    Success = false,
+                    Message = "Invalid login data"
+                });
             }
 
             try
             {
-                var result = await _userService.AuthenticateAsync(model);
+                var ipAddress = GetClientIpAddress();
+                var result = await _authService.AuthenticateAsync(model, ipAddress);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
             {
-                return StatusCode(401, new { error = ex.Message });
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { error = ex.Message });
+                return Unauthorized(new LoginResultDto
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during login");
-                return StatusCode(500, new { error = "An error occurred during login" });
+                return StatusCode(500, new LoginResultDto
+                {
+                    Success = false,
+                    Message = "Error during login"
+                });
             }
         }
 
@@ -68,26 +74,35 @@ namespace ChabbyNb_API.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return BadRequest(new LoginResultDto
+                {
+                    Success = false,
+                    Message = "Invalid refresh token data"
+                });
             }
 
             try
             {
-                var result = await _userService.RefreshTokenAsync(model);
-                return Ok(result);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return StatusCode(401, new { error = ex.Message });
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { error = ex.Message });
+                var ipAddress = GetClientIpAddress();
+                var result = await _authService.RefreshTokenAsync(model.RefreshToken, model.AccessToken, ipAddress);
+
+                return Ok(new LoginResultDto
+                {
+                    Success = true,
+                    Message = "Token refreshed successfully",
+                    Token = result.AccessToken,
+                    RefreshToken = result.RefreshToken,
+                    TokenExpiration = result.AccessTokenExpiration
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error refreshing token");
-                return StatusCode(500, new { error = "An error occurred while refreshing the token" });
+                return StatusCode(500, new LoginResultDto
+                {
+                    Success = false,
+                    Message = "Error refreshing token"
+                });
             }
         }
 
@@ -95,19 +110,20 @@ namespace ChabbyNb_API.Controllers
         /// Logout user
         /// </summary>
         [HttpPost("Logout")]
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        [Authorize]
         public async Task<IActionResult> Logout([FromBody] LogoutDto model)
         {
             try
             {
-                await _userService.LogoutAsync(model);
-                return Ok(new { success = true, message = "Logged out successfully" });
+                var ipAddress = GetClientIpAddress();
+                await _authService.RevokeTokenAsync(model.RefreshToken, ipAddress);
+                return ApiSuccess("Logged out successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during logout");
                 // Still return success even if token revocation fails
-                return Ok(new { success = true, message = "Logged out successfully" });
+                _logger.LogError(ex, "Error during logout");
+                return ApiSuccess("Logged out successfully");
             }
         }
 
@@ -119,33 +135,94 @@ namespace ChabbyNb_API.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return ValidationError("Invalid registration data");
             }
 
             try
             {
-                var user = await _userService.RegisterAsync(model);
-
-                return Ok(new
+                if (string.IsNullOrEmpty(model.Email) || string.IsNullOrEmpty(model.Password))
                 {
-                    success = true,
-                    message = "Registration successful. Please check your email to verify your account.",
-                    userId = user.UserID,
-                    email = user.Email
-                });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { error = ex.Message });
+                    return ValidationError("Email and password are required");
+                }
+
+                // Check if email already exists
+                var existingUser = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email.ToLower() == model.Email.ToLower());
+
+                if (existingUser != null)
+                {
+                    return ApiError("A user with this email already exists", null, 409);
+                }
+
+                // Check if username already exists
+                if (!string.IsNullOrEmpty(model.Username))
+                {
+                    var existingUsername = await _context.Users
+                        .AnyAsync(u => u.Username.ToLower() == model.Username.ToLower());
+
+                    if (existingUsername)
+                    {
+                        return ApiError("This username is already taken", null, 409);
+                    }
+                }
+
+                // Create the user
+                var newUser = new User
+                {
+                    Email = model.Email,
+                    Username = model.Username ?? model.Email, // Use email as username if not provided
+                    PasswordHash = _authService.HashPassword(model.Password),
+                    FirstName = model.FirstName,
+                    LastName = model.LastName,
+                    PhoneNumber = model.PhoneNumber,
+                    IsAdmin = false, // New users are never admins
+                    CreatedDate = DateTime.UtcNow,
+                    IsEmailVerified = false // Require email verification
+                };
+
+                // Start a transaction
+                using var transaction = await _context.Database.BeginTransactionAsync();
+
+                try
+                {
+                    // Add the user
+                    _context.Users.Add(newUser);
+                    await _context.SaveChangesAsync();
+
+                    // Create email verification token
+                    string verificationToken = _authService.GenerateSecureToken(32);
+                    var verification = new EmailVerification
+                    {
+                        UserID = newUser.UserID,
+                        Email = newUser.Email,
+                        VerificationToken = verificationToken,
+                        ExpiryDate = DateTime.UtcNow.AddDays(3),
+                        IsVerified = false,
+                        CreatedDate = DateTime.UtcNow
+                    };
+
+                    _context.EmailVerifications.Add(verification);
+                    await _context.SaveChangesAsync();
+
+                    // Commit the transaction
+                    await transaction.CommitAsync();
+
+                    // Send verification email
+                    await SendVerificationEmailAsync(newUser, verificationToken);
+
+                    return ApiSuccess("Registration successful. Please check your email to verify your account.",
+                        new { userId = newUser.UserID, email = newUser.Email });
+                }
+                catch (Exception ex)
+                {
+                    // Roll back the transaction on error
+                    await transaction.RollbackAsync();
+                    return HandleException(ex, "Error registering user");
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during registration");
-                return StatusCode(500, new { error = "An error occurred during registration" });
+                return HandleException(ex, "Error registering user");
             }
         }
 
@@ -153,42 +230,63 @@ namespace ChabbyNb_API.Controllers
         /// Update user profile
         /// </summary>
         [HttpPut("Profile")]
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        [Authorize(Policy = "RequireGuest")]
         public async Task<IActionResult> UpdateProfile([FromBody] ProfileDto model)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return ValidationError("Invalid profile data");
             }
 
             try
             {
-                int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-                var user = await _userService.UpdateProfileAsync(userId, model);
-
-                return Ok(new
+                var userId = GetCurrentUserId();
+                if (!userId.HasValue)
                 {
-                    success = true,
-                    message = "Profile updated successfully",
-                    data = new
+                    return Unauthorized(CreateApiResponse(false, "User not authenticated"));
+                }
+
+                var user = await _context.Users.FindAsync(userId.Value);
+                if (user == null)
+                {
+                    return NotFound(CreateApiResponse(false, "User not found"));
+                }
+
+                // Check if username is changed and already exists
+                if (!string.IsNullOrEmpty(model.Username) &&
+                    model.Username != user.Username)
+                {
+                    var existingUsername = await _context.Users
+                        .AnyAsync(u => u.Username.ToLower() == model.Username.ToLower() && u.UserID != userId.Value);
+
+                    if (existingUsername)
                     {
-                        userId = user.UserID,
-                        username = user.Username,
-                        email = user.Email,
-                        firstName = user.FirstName,
-                        lastName = user.LastName,
-                        phoneNumber = user.PhoneNumber
+                        return ApiError("This username is already taken", null, 409);
                     }
+                }
+
+                // Update user properties
+                user.Username = model.Username ?? user.Username;
+                user.FirstName = model.FirstName ?? user.FirstName;
+                user.LastName = model.LastName ?? user.LastName;
+                user.PhoneNumber = model.PhoneNumber ?? user.PhoneNumber;
+
+                _context.Users.Update(user);
+                await _context.SaveChangesAsync();
+
+                return ApiSuccess("Profile updated successfully", new
+                {
+                    userId = user.UserID,
+                    username = user.Username,
+                    email = user.Email,
+                    firstName = user.FirstName,
+                    lastName = user.LastName,
+                    phoneNumber = user.PhoneNumber
                 });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating profile");
-                return StatusCode(500, new { error = "An error occurred while updating your profile" });
+                return HandleException(ex, "Error updating profile");
             }
         }
 
@@ -196,37 +294,36 @@ namespace ChabbyNb_API.Controllers
         /// Change password
         /// </summary>
         [HttpPut("ChangePassword")]
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        [Authorize(Policy = "RequireGuest")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto model)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return ValidationError("Invalid password data");
             }
 
             try
             {
-                int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-                await _userService.ChangePasswordAsync(userId, model);
-
-                return Ok(new
+                var userId = GetCurrentUserId();
+                if (!userId.HasValue)
                 {
-                    success = true,
-                    message = "Password changed successfully. Please log in again with your new password."
-                });
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { error = ex.Message });
+                    return Unauthorized(CreateApiResponse(false, "User not authenticated"));
+                }
+
+                var result = await _authService.ChangePasswordAsync(userId.Value, model.CurrentPassword, model.NewPassword);
+
+                if (result)
+                {
+                    return ApiSuccess("Password changed successfully. Please log in again with your new password.");
+                }
+                else
+                {
+                    return ApiError("Current password is incorrect", null, 400);
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error changing password");
-                return StatusCode(500, new { error = "An error occurred while changing your password" });
+                return HandleException(ex, "Error changing password");
             }
         }
 
@@ -238,29 +335,34 @@ namespace ChabbyNb_API.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return ValidationError("Invalid email");
             }
 
             try
             {
-                await _userService.InitiatePasswordResetAsync(model.Email);
+                // First find the user
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email.ToLower() == model.Email.ToLower());
 
                 // Don't reveal whether the user exists
-                return Ok(new
+                if (user == null)
                 {
-                    success = true,
-                    message = "If your email is registered, you will receive a password reset link shortly."
-                });
+                    return ApiSuccess("If your email is registered, you will receive a password reset link shortly.");
+                }
+
+                // Generate reset token
+                var token = await _authService.GeneratePasswordResetTokenAsync(user.UserID);
+
+                // Send password reset email
+                await SendPasswordResetEmailAsync(user, token);
+
+                return ApiSuccess("If your email is registered, you will receive a password reset link shortly.");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error initiating password reset");
                 // Still return OK to not reveal whether the email exists
-                return Ok(new
-                {
-                    success = true,
-                    message = "If your email is registered, you will receive a password reset link shortly."
-                });
+                return ApiSuccess("If your email is registered, you will receive a password reset link shortly.");
             }
         }
 
@@ -272,27 +374,35 @@ namespace ChabbyNb_API.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return ValidationError("Invalid reset password data");
             }
 
             try
             {
-                await _userService.ResetPasswordAsync(model);
+                // Validate email
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email.ToLower() == model.Email.ToLower());
 
-                return Ok(new
+                if (user == null)
                 {
-                    success = true,
-                    message = "Password has been reset successfully. You can now log in with your new password."
-                });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { error = ex.Message });
+                    return ApiError("Invalid or expired reset token", null, 400);
+                }
+
+                // Reset the password
+                var result = await _authService.ResetPasswordAsync(user.UserID, model.Token, model.Password);
+
+                if (result)
+                {
+                    return ApiSuccess("Password has been reset successfully. You can now log in with your new password.");
+                }
+                else
+                {
+                    return ApiError("Invalid or expired reset token", null, 400);
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error resetting password");
-                return StatusCode(500, new { error = "An error occurred while resetting your password" });
+                return HandleException(ex, "Error resetting password");
             }
         }
 
@@ -304,30 +414,49 @@ namespace ChabbyNb_API.Controllers
         {
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(token))
             {
-                return BadRequest(new { error = "Email and token are required" });
+                return ValidationError("Email and token are required");
             }
 
             try
             {
-                bool success = await _userService.VerifyEmailAsync(email, token);
+                // Find user by email
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
 
-                if (success)
+                if (user == null)
                 {
-                    return Ok(new
-                    {
-                        success = true,
-                        message = "Email verified successfully. You can now log in."
-                    });
+                    return ApiError("Invalid verification link", null, 400);
                 }
-                else
+
+                // Find the verification record
+                var verification = await _context.EmailVerifications
+                    .FirstOrDefaultAsync(v =>
+                        v.UserID == user.UserID &&
+                        v.VerificationToken == token &&
+                        !v.IsVerified &&
+                        v.ExpiryDate > DateTime.UtcNow);
+
+                if (verification == null)
                 {
-                    return BadRequest(new { error = "Invalid or expired verification token" });
+                    return ApiError("Invalid or expired verification link", null, 400);
                 }
+
+                // Mark as verified
+                verification.IsVerified = true;
+                verification.VerifiedDate = DateTime.UtcNow;
+                _context.EmailVerifications.Update(verification);
+
+                // Update user's email verification status
+                user.IsEmailVerified = true;
+                _context.Users.Update(user);
+
+                await _context.SaveChangesAsync();
+
+                return ApiSuccess("Email verified successfully. You can now log in.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error verifying email");
-                return StatusCode(500, new { error = "An error occurred while verifying your email" });
+                return HandleException(ex, "Error verifying email");
             }
         }
 
@@ -339,52 +468,100 @@ namespace ChabbyNb_API.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return ValidationError("Invalid email");
             }
 
             try
             {
-                await _userService.ResendVerificationEmailAsync(model.Email);
+                // Find user by email
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email.ToLower() == model.Email.ToLower());
 
                 // Don't reveal whether the user exists
-                return Ok(new
+                if (user == null)
                 {
-                    success = true,
-                    message = "If your email is registered and not verified, you will receive a verification email shortly."
-                });
+                    return ApiSuccess("If your email is registered and not verified, you will receive a verification email shortly.");
+                }
+
+                // Check if already verified
+                if (user.IsEmailVerified)
+                {
+                    return ApiSuccess("Your email is already verified. You can log in.");
+                }
+
+                // Generate new token
+                string token = _authService.GenerateSecureToken(32);
+
+                // Create or update verification entry
+                var verification = await _context.EmailVerifications
+                    .FirstOrDefaultAsync(v => v.UserID == user.UserID && !v.IsVerified);
+
+                if (verification == null)
+                {
+                    // Create new verification
+                    verification = new EmailVerification
+                    {
+                        UserID = user.UserID,
+                        Email = user.Email,
+                        VerificationToken = token,
+                        ExpiryDate = DateTime.UtcNow.AddDays(3),
+                        IsVerified = false,
+                        CreatedDate = DateTime.UtcNow
+                    };
+                    _context.EmailVerifications.Add(verification);
+                }
+                else
+                {
+                    // Update existing verification
+                    verification.VerificationToken = token;
+                    verification.ExpiryDate = DateTime.UtcNow.AddDays(3);
+                    _context.EmailVerifications.Update(verification);
+                }
+
+                await _context.SaveChangesAsync();
+
+                // Send verification email
+                await SendVerificationEmailAsync(user, token);
+
+                return ApiSuccess("If your email is registered and not verified, you will receive a verification email shortly.");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error resending verification email");
                 // Still return OK to not reveal whether the email exists
-                return Ok(new
-                {
-                    success = true,
-                    message = "If your email is registered and not verified, you will receive a verification email shortly."
-                });
+                return ApiSuccess("If your email is registered and not verified, you will receive a verification email shortly.");
             }
         }
 
-        #region Role Management (Admin Only)
+        #region User Role Management (Admin Only)
 
         /// <summary>
         /// Get current user's roles
         /// </summary>
         [HttpGet("Roles")]
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        [Authorize]
         public async Task<IActionResult> GetUserRoles()
         {
             try
             {
-                int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-                var roles = await _roleService.GetUserRolesAsync(userId);
+                var userId = GetCurrentUserId();
+                if (!userId.HasValue)
+                {
+                    return Unauthorized(CreateApiResponse(false, "User not authenticated"));
+                }
 
-                return Ok(roles);
+                var roles = await _authService.GetUserRolesAsync(userId.Value);
+                var permissions = await _authService.GetUserPermissionsAsync(userId.Value);
+
+                return ApiSuccess("Roles retrieved successfully", new
+                {
+                    roles = roles.Select(r => r.ToString()),
+                    permissions = permissions.Select(p => p.ToString())
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting user roles");
-                return StatusCode(500, new { error = "An error occurred while retrieving roles" });
+                return HandleException(ex, "Error getting user roles");
             }
         }
 
@@ -392,71 +569,74 @@ namespace ChabbyNb_API.Controllers
         /// Get roles for a specific user (Admin only)
         /// </summary>
         [HttpGet("Users/{userId}/Roles")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> GetRolesForUser(int userId)
         {
             try
             {
-                var user = await _userService.GetUserByIdAsync(userId);
+                var user = await _context.Users.FindAsync(userId);
                 if (user == null)
                 {
-                    return NotFound(new { error = "User not found" });
+                    return NotFound(CreateApiResponse(false, "User not found"));
                 }
 
-                // New code - use the RoleService directly
-                var roles = await _roleService.GetUserRolesAsync(userId);
-                return Ok(roles);
+                var roles = await _authService.GetUserRolesAsync(userId);
+                var permissions = await _authService.GetUserPermissionsAsync(userId);
+
+                return ApiSuccess("Roles retrieved successfully", new
+                {
+                    userId,
+                    email = user.Email,
+                    username = user.Username,
+                    roles = roles.Select(r => r.ToString()),
+                    permissions = permissions.Select(p => p.ToString())
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error getting roles for user {userId}");
-                return StatusCode(500, new { error = "An error occurred while retrieving roles" });
+                return HandleException(ex, $"Error getting roles for user {userId}");
             }
         }
 
         /// <summary>
         /// Assign role to user (Admin only)
         /// </summary>
-        [HttpPost("Users/{userId}/Roles")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> AssignRoleToUser(int userId, [FromBody] AssignRoleDto model)
+        [HttpPost("Users/{userId}/Roles/{role}")]
+        [Authorize(Policy = "RequireAdmin")]
+        public async Task<IActionResult> AssignRoleToUser(int userId, string role)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
             try
             {
-                var user = await _userService.GetUserByIdAsync(userId);
+                var user = await _context.Users.FindAsync(userId);
                 if (user == null)
                 {
-                    return NotFound(new { error = "User not found" });
+                    return NotFound(CreateApiResponse(false, "User not found"));
                 }
 
-                bool success = await _roleService.AssignRoleToUserAsync(userId, model.Role);
+                // Parse the role
+                if (!Enum.TryParse<UserRole>(role, true, out var userRole))
+                {
+                    return ApiError($"Invalid role: {role}", null, 400);
+                }
+
+                // Get admin ID for tracking
+                var adminId = GetCurrentUserId().Value;
+
+                // Assign the role
+                var success = await _authService.AssignRoleToUserAsync(userId, userRole, adminId);
 
                 if (success)
                 {
-                    return Ok(new
-                    {
-                        success = true,
-                        message = $"Role '{model.Role}' assigned to user successfully"
-                    });
+                    return ApiSuccess($"Role '{role}' assigned to user successfully");
                 }
                 else
                 {
-                    return BadRequest(new { error = "Failed to assign role" });
+                    return ApiError("Failed to assign role", null, 500);
                 }
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error assigning role to user {userId}");
-                return StatusCode(500, new { error = "An error occurred while assigning the role" });
+                return HandleException(ex, $"Error assigning role to user {userId}");
             }
         }
 
@@ -464,64 +644,83 @@ namespace ChabbyNb_API.Controllers
         /// Remove role from user (Admin only)
         /// </summary>
         [HttpDelete("Users/{userId}/Roles/{role}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> RemoveRoleFromUser(int userId, string role)
         {
             try
             {
-                var user = await _userService.GetUserByIdAsync(userId);
+                var user = await _context.Users.FindAsync(userId);
                 if (user == null)
                 {
-                    return NotFound(new { error = "User not found" });
+                    return NotFound(CreateApiResponse(false, "User not found"));
                 }
 
-                // New code - use the RoleService
-                bool success = await _roleService.RemoveRoleFromUserAsync(userId, role);
+                // Parse the role
+                if (!Enum.TryParse<UserRole>(role, true, out var userRole))
+                {
+                    return ApiError($"Invalid role: {role}", null, 400);
+                }
+
+                // Get admin ID for tracking
+                var adminId = GetCurrentUserId().Value;
+
+                // Remove the role
+                var success = await _authService.RemoveRoleFromUserAsync(userId, userRole, adminId);
 
                 if (success)
                 {
-                    return Ok(new
-                    {
-                        success = true,
-                        message = $"Role '{role}' removed from user successfully"
-                    });
+                    return ApiSuccess($"Role '{role}' removed from user successfully");
                 }
                 else
                 {
-                    return BadRequest(new { error = "Failed to remove role" });
+                    return ApiError("Failed to remove role", null, 500);
                 }
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error removing role from user {userId}");
-                return StatusCode(500, new { error = "An error occurred while removing the role" });
+                return HandleException(ex, $"Error removing role from user {userId}");
             }
         }
 
         /// <summary>
-        /// Get users with a specific role (Admin only)
+        /// Set permissions for a partner user (Admin only)
         /// </summary>
-        [HttpGet("Roles/{role}/Users")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetUsersInRole(string role)
+        [HttpPost("Users/{userId}/Permissions")]
+        [Authorize(Policy = "RequireAdmin")]
+        public async Task<IActionResult> SetUserPermissions(int userId, [FromBody] SetPermissionsDto model)
         {
             try
             {
-                var users = await _userService.GetUsersByRoleAsync(role);
-                return Ok(users);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { error = ex.Message });
+                var user = await _context.Users.FindAsync(userId);
+                if (user == null)
+                {
+                    return NotFound(CreateApiResponse(false, "User not found"));
+                }
+
+                // Parse the permissions
+                if (!Enum.TryParse<UserPermission>(model.Permissions, true, out var permissions))
+                {
+                    return ApiError($"Invalid permissions: {model.Permissions}", null, 400);
+                }
+
+                // Get admin ID for tracking
+                var adminId = GetCurrentUserId().Value;
+
+                // Set the permissions
+                var success = await _authService.SetUserPermissionsAsync(userId, permissions, adminId);
+
+                if (success)
+                {
+                    return ApiSuccess($"Permissions set to '{model.Permissions}' for user successfully");
+                }
+                else
+                {
+                    return ApiError("Failed to set permissions", null, 500);
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error getting users with role {role}");
-                return StatusCode(500, new { error = "An error occurred while retrieving users" });
+                return HandleException(ex, $"Error setting permissions for user {userId}");
             }
         }
 
@@ -529,21 +728,110 @@ namespace ChabbyNb_API.Controllers
         /// Get all available roles (Admin only)
         /// </summary>
         [HttpGet("Roles/All")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Policy = "RequireAdmin")]
         public IActionResult GetAllRoles()
         {
             try
             {
-                var roles = _roleService.GetAllRoles();
-                return Ok(roles);
+                var roles = Enum.GetNames(typeof(UserRole));
+                var permissions = Enum.GetNames(typeof(UserPermission));
+
+                return ApiSuccess("Roles and permissions retrieved successfully", new
+                {
+                    roles,
+                    permissions
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting all roles");
-                return StatusCode(500, new { error = "An error occurred while retrieving roles" });
+                return HandleException(ex, "Error getting all roles");
             }
         }
 
         #endregion
+
+        #region Helper Methods
+
+        /// <summary>
+        /// Sends a verification email to a user
+        /// </summary>
+        private async Task SendVerificationEmailAsync(User user, string token)
+        {
+            try
+            {
+                // Build verification URL using configuration
+                string baseUrl = string.IsNullOrEmpty(_configuration["ApplicationUrl"])
+                    ? $"{Request.Scheme}://{Request.Host}"
+                    : _configuration["ApplicationUrl"];
+
+                string verifyUrl = $"{baseUrl}/verify-email?email={Uri.EscapeDataString(user.Email)}&token={token}";
+
+                // Create email model
+                var model = new
+                {
+                    UserName = !string.IsNullOrEmpty(user.FirstName) ? user.FirstName : user.Username,
+                    VerificationLink = verifyUrl,
+                    ExpiryHours = 72 // 3 days in hours
+                };
+
+                // Send email
+                await _emailService.SendEmailAsync(
+                    user.Email,
+                    "Verify Your ChabbyNb Account",
+                    "EmailVerification",
+                    model
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error sending verification email to {user.Email}");
+                // Continue without throwing - verification can be re-sent later
+            }
+        }
+
+        /// <summary>
+        /// Sends a password reset email
+        /// </summary>
+        private async Task SendPasswordResetEmailAsync(User user, string token)
+        {
+            try
+            {
+                // Build reset URL using configuration
+                string baseUrl = string.IsNullOrEmpty(_configuration["ApplicationUrl"])
+                    ? $"{Request.Scheme}://{Request.Host}"
+                    : _configuration["ApplicationUrl"];
+
+                string resetUrl = $"{baseUrl}/reset-password?email={Uri.EscapeDataString(user.Email)}&token={token}";
+
+                // Create email model
+                var model = new
+                {
+                    UserName = !string.IsNullOrEmpty(user.FirstName) ? user.FirstName : user.Username,
+                    ResetLink = resetUrl,
+                    ExpiryHours = 24
+                };
+
+                // Send email
+                await _emailService.SendEmailAsync(
+                    user.Email,
+                    "Reset Your ChabbyNb Password",
+                    "PasswordReset",
+                    model
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error sending password reset email to {user.Email}");
+                // Continue without throwing - password reset can be re-initiated later
+            }
+        }
+
+        #endregion
+    }
+
+    public class SetPermissionsDto
+    {
+        [Required]
+        public string Permissions { get; set; }
     }
 }

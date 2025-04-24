@@ -15,29 +15,49 @@ using ChabbyNb_API.Data;
 using ChabbyNb_API.Models;
 using ChabbyNb_API.Models.DTOs;
 
-namespace ChabbyNb_API.Services
+namespace ChabbyNb_API.Services.Auth
 {
     /// <summary>
-    /// Consolidated service for security-related operations including:
-    /// - Token management (JWT and refresh tokens)
-    /// - Account lockout handling
-    /// - User authentication
-    /// - Password hashing and verification
+    /// Result of token operations containing tokens and expiration information
     /// </summary>
-    public interface ISecurityService
+    public class TokenResult
+    {
+        public string AccessToken { get; set; }
+        public string RefreshToken { get; set; }
+        public DateTime AccessTokenExpiration { get; set; }
+        public DateTime RefreshTokenExpiration { get; set; }
+    }
+
+    /// <summary>
+    /// Class representing a security event for audit logging
+    /// </summary>
+    public class SecurityEvent
+    {
+        public int UserId { get; set; }
+        public string EventType { get; set; }
+        public DateTime Timestamp { get; set; }
+        public string IpAddress { get; set; }
+        public string Details { get; set; }
+    }
+
+    /// <summary>
+    /// Comprehensive authentication service that handles all aspects of user authentication,
+    /// including JWT token management, refresh tokens, account security, and role-based access control.
+    /// </summary>
+    public interface IAuthService
     {
         // Authentication methods
-        Task<LoginResultDto> AuthenticateAsync(string email, string password, string ipAddress);
+        Task<LoginResultDto> AuthenticateAsync(LoginDto loginDto, string ipAddress);
         Task<LoginResultDto> AuthenticateWithReservationAsync(string email, string reservationNumber, string ipAddress);
 
         // Token management
-        Task<TokenResult> GenerateTokensAsync(User user, IEnumerable<string> roles, string ipAddress);
+        Task<TokenResult> GenerateTokensAsync(User user, IEnumerable<UserRole> roles, IEnumerable<UserPermission> permissions, string ipAddress);
         Task<TokenResult> RefreshTokenAsync(string refreshToken, string accessToken, string ipAddress);
         Task<bool> RevokeTokenAsync(string refreshToken, string ipAddress, string reason = "Explicit logout");
         Task<bool> RevokeAllUserTokensAsync(int userId, string ipAddress, string reason = "Administrative action");
         bool ValidateAccessToken(string token, out ClaimsPrincipal principal);
 
-        // Account lockout management
+        // Account security
         Task<bool> IsAccountLockedOutAsync(int userId);
         Task<bool> IsAccountLockedOutAsync(string email);
         Task<bool> RecordFailedLoginAttemptAsync(string email, string ipAddress);
@@ -50,6 +70,18 @@ namespace ChabbyNb_API.Services
         bool VerifyPassword(string password, string hashedPassword);
         Task<string> GeneratePasswordResetTokenAsync(int userId);
         Task<bool> ValidatePasswordResetTokenAsync(int userId, string token);
+        Task<bool> ResetPasswordAsync(int userId, string token, string newPassword);
+        Task<bool> ChangePasswordAsync(int userId, string currentPassword, string newPassword);
+
+        // User role/permission management
+        Task<IEnumerable<UserRole>> GetUserRolesAsync(int userId);
+        Task<UserRole> GetHighestRoleAsync(int userId);
+        Task<IEnumerable<UserPermission>> GetUserPermissionsAsync(int userId);
+        Task<bool> HasPermissionAsync(int userId, UserPermission permission);
+        Task<bool> HasRoleAsync(int userId, UserRole minimumRole);
+        Task<bool> AssignRoleToUserAsync(int userId, UserRole role, int adminId);
+        Task<bool> RemoveRoleFromUserAsync(int userId, UserRole role, int adminId);
+        Task<bool> SetUserPermissionsAsync(int userId, UserPermission permissions, int adminId);
 
         // Utility methods
         Task<SecurityEvent> LogSecurityEventAsync(int userId, string eventType, string ipAddress, string details = null);
@@ -57,13 +89,13 @@ namespace ChabbyNb_API.Services
     }
 
     /// <summary>
-    /// Implementation of the consolidated security service
+    /// Implementation of the comprehensive authentication service
     /// </summary>
-    public class SecurityService : ISecurityService
+    public class AuthService : IAuthService
     {
         private readonly ChabbyNbDbContext _context;
         private readonly IConfiguration _configuration;
-        private readonly ILogger<SecurityService> _logger;
+        private readonly ILogger<AuthService> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
         // Configuration values
@@ -75,10 +107,10 @@ namespace ChabbyNb_API.Services
         private readonly int _maxFailedAttempts;
         private readonly int _defaultLockoutMinutes;
 
-        public SecurityService(
+        public AuthService(
             ChabbyNbDbContext context,
             IConfiguration configuration,
-            ILogger<SecurityService> logger,
+            ILogger<AuthService> logger,
             IHttpContextAccessor httpContextAccessor)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -107,76 +139,77 @@ namespace ChabbyNb_API.Services
         /// <summary>
         /// Authenticates a user with email and password
         /// </summary>
-        public async Task<LoginResultDto> AuthenticateAsync(string email, string password, string ipAddress)
+        public async Task<LoginResultDto> AuthenticateAsync(LoginDto loginDto, string ipAddress)
         {
-            if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+            // Email is always required for authentication
+            if (string.IsNullOrEmpty(loginDto.Email))
             {
-                throw new ArgumentException("Email and password are required");
+                throw new ArgumentException("Email is required");
+            }
+
+            // Custom validation for password or reservation
+            if (string.IsNullOrEmpty(loginDto.Password) && string.IsNullOrEmpty(loginDto.ReservationNumber))
+            {
+                throw new ArgumentException("Either Password or Reservation Number is required");
             }
 
             // Check if account is locked out
-            if (await IsAccountLockedOutAsync(email))
+            if (await IsAccountLockedOutAsync(loginDto.Email))
             {
                 throw new UnauthorizedAccessException("This account is temporarily locked. Please try again later or contact support.");
             }
 
-            // Find user by email
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
-
-            if (user == null)
+            // Handle login with password
+            if (!string.IsNullOrEmpty(loginDto.Password))
             {
-                // Record failed login attempt
-                await RecordFailedLoginAttemptAsync(email, ipAddress);
-                throw new UnauthorizedAccessException("Invalid email or password");
+                var hashedPassword = HashPassword(loginDto.Password);
+                var user = await _context.Users.FirstOrDefaultAsync(u =>
+                    u.Email.ToLower() == loginDto.Email.ToLower() &&
+                    u.PasswordHash == hashedPassword);
+
+                if (user == null)
+                {
+                    // Record failed login attempt
+                    await RecordFailedLoginAttemptAsync(loginDto.Email, ipAddress);
+                    throw new UnauthorizedAccessException("Invalid email or password");
+                }
+
+                if (!user.IsEmailVerified)
+                {
+                    throw new UnauthorizedAccessException("Please verify your email before logging in");
+                }
+
+                // Record successful login
+                await RecordSuccessfulLoginAsync(user.UserID, ipAddress);
+
+                // Get user roles and permissions
+                var roles = await GetUserRolesAsync(user.UserID);
+                var permissions = await GetUserPermissionsAsync(user.UserID);
+
+                // Generate tokens
+                var tokenResult = await GenerateTokensAsync(user, roles, permissions, ipAddress);
+
+                // Create login result
+                return new LoginResultDto
+                {
+                    Success = true,
+                    Message = "Login successful",
+                    Token = tokenResult.AccessToken,
+                    RefreshToken = tokenResult.RefreshToken,
+                    TokenExpiration = tokenResult.AccessTokenExpiration,
+                    UserId = user.UserID,
+                    Email = user.Email,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    IsAdmin = roles.Contains(UserRole.Admin),
+                    Roles = roles.Select(r => r.ToString()).ToList()
+                };
             }
-
-            // Verify password
-            if (!VerifyPassword(password, user.PasswordHash))
+            else
             {
-                // Record failed login attempt
-                await RecordFailedLoginAttemptAsync(email, ipAddress);
-                throw new UnauthorizedAccessException("Invalid email or password");
+                // Handle login with reservation number
+                return await AuthenticateWithReservationAsync(loginDto.Email, loginDto.ReservationNumber, ipAddress);
             }
-
-            // Check email verification
-            if (!user.IsEmailVerified)
-            {
-                throw new UnauthorizedAccessException("Please verify your email before logging in");
-            }
-
-            // Record successful login
-            await RecordSuccessfulLoginAsync(user.UserID, ipAddress);
-
-            // Determine user roles
-            var roles = new List<string>();
-
-            // Add admin role if applicable
-            if (user.IsAdmin)
-            {
-                roles.Add("Admin");
-            }
-
-            // Always add Guest role for regular users
-            roles.Add("Guest");
-
-            // Generate tokens
-            var tokenResult = await GenerateTokensAsync(user, roles, ipAddress);
-
-            // Create and return login result
-            return new LoginResultDto
-            {
-                Success = true,
-                Message = "Login successful",
-                Token = tokenResult.AccessToken,
-                RefreshToken = tokenResult.RefreshToken,
-                TokenExpiration = tokenResult.AccessTokenExpiration,
-                UserId = user.UserID,
-                Email = user.Email,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                IsAdmin = user.IsAdmin,
-                Roles = roles
-            };
         }
 
         /// <summary>
@@ -189,68 +222,67 @@ namespace ChabbyNb_API.Services
                 throw new ArgumentException("Email and reservation number are required");
             }
 
-            // Check if account is locked out
-            if (await IsAccountLockedOutAsync(email))
+            try
             {
-                throw new UnauthorizedAccessException("This account is temporarily locked. Please try again later or contact support.");
+                // First find the user by email
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
+
+                if (user == null)
+                {
+                    // Record failed login attempt
+                    await RecordFailedLoginAttemptAsync(email, ipAddress);
+                    throw new UnauthorizedAccessException("Invalid email or reservation number");
+                }
+
+                // Then find the booking by reservation number and verify it belongs to the user
+                var booking = await _context.Bookings
+                    .FirstOrDefaultAsync(b =>
+                        b.ReservationNumber == reservationNumber &&
+                        b.UserID == user.UserID);
+
+                if (booking == null)
+                {
+                    // Record failed login attempt
+                    await RecordFailedLoginAttemptAsync(email, ipAddress);
+                    throw new UnauthorizedAccessException("Invalid email or reservation number");
+                }
+
+                // Record successful login
+                await RecordSuccessfulLoginAsync(user.UserID, ipAddress);
+
+                // Get user roles and permissions
+                var roles = await GetUserRolesAsync(user.UserID);
+                var permissions = await GetUserPermissionsAsync(user.UserID);
+
+                // Generate tokens
+                var tokenResult = await GenerateTokensAsync(user, roles, permissions, ipAddress);
+
+                // Create login result
+                return new LoginResultDto
+                {
+                    Success = true,
+                    Message = "Login successful",
+                    Token = tokenResult.AccessToken,
+                    RefreshToken = tokenResult.RefreshToken,
+                    TokenExpiration = tokenResult.AccessTokenExpiration,
+                    UserId = user.UserID,
+                    Email = user.Email,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    IsAdmin = roles.Contains(UserRole.Admin),
+                    Roles = roles.Select(r => r.ToString()).ToList()
+                };
             }
-
-            // Find user by email
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
-
-            if (user == null)
+            catch (UnauthorizedAccessException)
             {
-                // Record failed login attempt
-                await RecordFailedLoginAttemptAsync(email, ipAddress);
-                throw new UnauthorizedAccessException("Invalid email or reservation number");
+                throw; // Rethrow specific unauthorized exceptions
             }
-
-            // Find booking with the given reservation number for this user
-            var booking = await _context.Bookings
-                .FirstOrDefaultAsync(b =>
-                    b.ReservationNumber == reservationNumber &&
-                    b.UserID == user.UserID);
-
-            if (booking == null)
+            catch (Exception ex)
             {
-                // Record failed login attempt
-                await RecordFailedLoginAttemptAsync(email, ipAddress);
-                throw new UnauthorizedAccessException("Invalid email or reservation number");
+                _logger.LogError(ex, $"Error during reservation authentication: {ex.Message}");
+                throw new UnauthorizedAccessException("Authentication failed");
             }
-
-            // Record successful login
-            await RecordSuccessfulLoginAsync(user.UserID, ipAddress);
-
-            // Determine user roles
-            var roles = new List<string>();
-
-            // Add admin role if applicable
-            if (user.IsAdmin)
-            {
-                roles.Add("Admin");
-            }
-
-            // Always add Guest role for regular users
-            roles.Add("Guest");
-
-            // Generate tokens
-            var tokenResult = await GenerateTokensAsync(user, roles, ipAddress);
-
-            // Create and return login result
-            return new LoginResultDto
-            {
-                Success = true,
-                Message = "Login successful",
-                Token = tokenResult.AccessToken,
-                RefreshToken = tokenResult.RefreshToken,
-                TokenExpiration = tokenResult.AccessTokenExpiration,
-                UserId = user.UserID,
-                Email = user.Email,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                IsAdmin = user.IsAdmin,
-                Roles = roles
-            };
         }
 
         #endregion
@@ -260,7 +292,7 @@ namespace ChabbyNb_API.Services
         /// <summary>
         /// Generates both access token and refresh token for a user
         /// </summary>
-        public async Task<TokenResult> GenerateTokensAsync(User user, IEnumerable<string> roles, string ipAddress)
+        public async Task<TokenResult> GenerateTokensAsync(User user, IEnumerable<UserRole> roles, IEnumerable<UserPermission> permissions, string ipAddress)
         {
             if (user == null)
             {
@@ -276,15 +308,21 @@ namespace ChabbyNb_API.Services
             {
                 new Claim(ClaimTypes.NameIdentifier, user.UserID.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Name, user.Username ?? user.Email),
-                new Claim("IsAdmin", user.IsAdmin.ToString())
+                new Claim(ClaimTypes.Name, user.Username ?? user.Email)
             };
 
             // Add role claims
             foreach (var role in roles)
             {
-                claims.Add(new Claim(ClaimTypes.Role, role));
+                claims.Add(new Claim(ClaimTypes.Role, role.ToString()));
             }
+
+            // Legacy IsAdmin claim for backward compatibility
+            claims.Add(new Claim("IsAdmin", roles.Contains(UserRole.Admin).ToString()));
+
+            // Add permissions as a single claim
+            int permissionsValue = permissions.Aggregate(0, (current, permission) => current | (int)permission);
+            claims.Add(new Claim("Permissions", permissionsValue.ToString()));
 
             // Add name claims if available
             if (!string.IsNullOrEmpty(user.FirstName))
@@ -407,8 +445,23 @@ namespace ChabbyNb_API.Services
                 throw new SecurityTokenException("User not found");
             }
 
-            // Extract roles from the existing token
-            var roles = principal.FindAll(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
+            // Extract roles from claims
+            var roleClaims = principal.FindAll(c => c.Type == ClaimTypes.Role);
+            var roles = roleClaims.Select(c => Enum.Parse<UserRole>(c.Value)).ToList();
+
+            // Extract permissions from claims
+            var permissionsClaim = principal.FindFirstValue("Permissions");
+            var permissions = new List<UserPermission>();
+            if (int.TryParse(permissionsClaim, out int permissionsValue))
+            {
+                foreach (UserPermission permission in Enum.GetValues(typeof(UserPermission)))
+                {
+                    if ((permissionsValue & (int)permission) == (int)permission && permission != UserPermission.None)
+                    {
+                        permissions.Add(permission);
+                    }
+                }
+            }
 
             // Revoke the current refresh token
             storedToken.IsRevoked = true;
@@ -421,7 +474,7 @@ namespace ChabbyNb_API.Services
             await _context.SaveChangesAsync();
 
             // Generate new tokens
-            var tokenResult = await GenerateTokensAsync(user, roles, ipAddress);
+            var tokenResult = await GenerateTokensAsync(user, roles, permissions, ipAddress);
 
             // Update the replaced by token reference
             storedToken.ReplacedByToken = tokenResult.RefreshToken;
@@ -700,15 +753,20 @@ namespace ChabbyNb_API.Services
                 var user = await _context.Users
                     .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
 
-                // Create the security event
-                await LogSecurityEventAsync(
-                    user?.UserID ?? 0, // Use 0 for non-existent users
-                    "FailedLogin",
-                    ipAddress,
-                    user == null
+                // Record the event even if user doesn't exist (for security auditing)
+                var securityEvent = new UserSecurityEvent
+                {
+                    UserId = user?.UserID ?? 0, // Use 0 for non-existent users
+                    EventType = "FailedLogin",
+                    EventTime = DateTime.UtcNow,
+                    IpAddress = ipAddress,
+                    AdditionalInfo = user == null
                         ? $"Failed login attempt for non-existent email: {email}"
                         : "Failed login attempt"
-                );
+                };
+
+                _context.UserSecurityEvents.Add(securityEvent);
+                await _context.SaveChangesAsync();
 
                 // If user doesn't exist, just return (we've logged the attempt)
                 if (user == null)
@@ -720,12 +778,17 @@ namespace ChabbyNb_API.Services
                 if (await IsAccountLockedOutAsync(user.UserID))
                 {
                     // Log attempt on locked account but don't increment counters
-                    await LogSecurityEventAsync(
-                        user.UserID,
-                        "FailedLoginWhenLocked",
-                        ipAddress,
-                        "Failed login attempt on locked account"
-                    );
+                    var lockedEvent = new UserSecurityEvent
+                    {
+                        UserId = user.UserID,
+                        EventType = "FailedLoginWhenLocked",
+                        EventTime = DateTime.UtcNow,
+                        IpAddress = ipAddress,
+                        AdditionalInfo = "Failed login attempt on locked account"
+                    };
+
+                    _context.UserSecurityEvents.Add(lockedEvent);
+                    await _context.SaveChangesAsync();
                     return true;
                 }
 
@@ -742,8 +805,7 @@ namespace ChabbyNb_API.Services
                         user.UserID,
                         $"Too many failed login attempts ({recentFailures + 1})",
                         ipAddress,
-                        _defaultLockoutMinutes
-                    );
+                        _defaultLockoutMinutes);
                 }
 
                 return true;
@@ -763,12 +825,17 @@ namespace ChabbyNb_API.Services
             try
             {
                 // Log the successful login
-                await LogSecurityEventAsync(
-                    userId,
-                    "SuccessfulLogin",
-                    ipAddress,
-                    "Successful login"
-                );
+                var successEvent = new UserSecurityEvent
+                {
+                    UserId = userId,
+                    EventType = "SuccessfulLogin",
+                    EventTime = DateTime.UtcNow,
+                    IpAddress = ipAddress,
+                    AdditionalInfo = "Successful login"
+                };
+
+                _context.UserSecurityEvents.Add(successEvent);
+                await _context.SaveChangesAsync();
 
                 return true;
             }
@@ -819,13 +886,16 @@ namespace ChabbyNb_API.Services
                 _context.UserAccountLockouts.Add(lockout);
 
                 // Record security event
-                await LogSecurityEventAsync(
-                    userId,
-                    "AccountLockout",
-                    ipAddress,
-                    $"Account locked for {lockoutMinutes} minutes. Reason: {reason}"
-                );
+                var lockoutEvent = new UserSecurityEvent
+                {
+                    UserId = userId,
+                    EventType = "AccountLockout",
+                    EventTime = DateTime.UtcNow,
+                    IpAddress = ipAddress,
+                    AdditionalInfo = $"Account locked for {lockoutMinutes} minutes. Reason: {reason}"
+                };
 
+                _context.UserSecurityEvents.Add(lockoutEvent);
                 await _context.SaveChangesAsync();
 
                 _logger.LogWarning($"Account locked for user ID {userId}. Reason: {reason}");
@@ -864,13 +934,16 @@ namespace ChabbyNb_API.Services
                 activeLockout.Notes = notes;
 
                 // Record security event
-                await LogSecurityEventAsync(
-                    userId,
-                    "AccountUnlock",
-                    ipAddress,
-                    $"Account unlocked by admin ID {adminId}. Notes: {notes}"
-                );
+                var unlockEvent = new UserSecurityEvent
+                {
+                    UserId = userId,
+                    EventType = "AccountUnlock",
+                    EventTime = DateTime.UtcNow,
+                    IpAddress = ipAddress,
+                    AdditionalInfo = $"Account unlocked by admin ID {adminId}. Notes: {notes}"
+                };
 
+                _context.UserSecurityEvents.Add(unlockEvent);
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation($"Account unlocked for user ID {userId} by admin ID {adminId}");
@@ -978,6 +1051,321 @@ namespace ChabbyNb_API.Services
             return tempPassword != null;
         }
 
+        /// <summary>
+        /// Resets a user's password using a token
+        /// </summary>
+        public async Task<bool> ResetPasswordAsync(int userId, string token, string newPassword)
+        {
+            // Validate token
+            if (!await ValidatePasswordResetTokenAsync(userId, token))
+            {
+                return false;
+            }
+
+            // Find the user
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return false;
+            }
+
+            // Update the password
+            user.PasswordHash = HashPassword(newPassword);
+            _context.Users.Update(user);
+
+            // Mark the token as used
+            var tempPassword = await _context.Tempwds
+                .FirstOrDefaultAsync(t =>
+                    t.UserID == userId &&
+                    t.Token == token &&
+                    !t.IsUsed);
+
+            if (tempPassword != null)
+            {
+                tempPassword.IsUsed = true;
+                _context.Tempwds.Update(tempPassword);
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Revoke all existing refresh tokens for security
+            await RevokeAllUserTokensAsync(userId, "Password reset", "Password reset");
+
+            return true;
+        }
+
+        /// <summary>
+        /// Changes a user's password (requires current password verification)
+        /// </summary>
+        public async Task<bool> ChangePasswordAsync(int userId, string currentPassword, string newPassword)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return false;
+            }
+
+            // Verify current password
+            if (!VerifyPassword(currentPassword, user.PasswordHash))
+            {
+                return false;
+            }
+
+            // Update password
+            user.PasswordHash = HashPassword(newPassword);
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+
+            // Revoke all existing refresh tokens for security
+            await RevokeAllUserTokensAsync(userId, "Password changed", "Password changed by user");
+
+            return true;
+        }
+
+        #endregion
+
+        #region Role and Permission Management
+
+        /// <summary>
+        /// Gets all roles assigned to a user
+        /// </summary>
+        public async Task<IEnumerable<UserRole>> GetUserRolesAsync(int userId)
+        {
+            // Get the user to check legacy IsAdmin flag
+            var user = await _context.Users.FindAsync(userId);
+
+            if (user == null)
+            {
+                return new List<UserRole> { UserRole.Everyone };
+            }
+
+            var roles = new List<UserRole>();
+
+            // Every authenticated user gets the Guest role
+            roles.Add(UserRole.Guest);
+
+            // Add CleaningStaff role (in a real implementation, this would be stored in a database table)
+            // For now, we'll simulate this by checking username
+            if (user.Username?.Contains("cleaner", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                roles.Add(UserRole.CleaningStaff);
+            }
+
+            // Add Partner role (in a real implementation, this would be stored in a database table)
+            // For now, we'll simulate this by checking username
+            if (user.Username?.Contains("partner", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                roles.Add(UserRole.Partner);
+            }
+
+            // Legacy admin system support - if user is marked as admin in the User model
+            if (user.IsAdmin)
+            {
+                roles.Add(UserRole.Admin);
+            }
+
+            return roles.Distinct();
+        }
+
+        /// <summary>
+        /// Gets the highest role level for a user
+        /// </summary>
+        public async Task<UserRole> GetHighestRoleAsync(int userId)
+        {
+            var roles = await GetUserRolesAsync(userId);
+            return roles.Any() ? roles.Max() : UserRole.Everyone;
+        }
+
+        /// <summary>
+        /// Gets all permissions assigned to a user
+        /// </summary>
+        public async Task<IEnumerable<UserPermission>> GetUserPermissionsAsync(int userId)
+        {
+            // Get the user
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return new List<UserPermission> { UserPermission.None };
+            }
+
+            var roles = await GetUserRolesAsync(userId);
+            var permissions = new List<UserPermission>();
+
+            // Grant permissions based on roles
+            // In a real application, these would come from a database table
+            if (roles.Contains(UserRole.Admin))
+            {
+                // Admins have all permissions
+                permissions.Add(UserPermission.Full);
+            }
+            else if (roles.Contains(UserRole.Partner))
+            {
+                // Partners have read and write by default (but it can be customized)
+                // In a real app, this would be fetched from a database table
+                // For now, we'll simulate it based on username
+                if (user.Username?.Contains("readonly", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    permissions.Add(UserPermission.Read);
+                }
+                else if (user.Username?.Contains("readwrite", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    permissions.Add(UserPermission.ReadWrite);
+                }
+                else
+                {
+                    permissions.Add(UserPermission.Read);
+                    permissions.Add(UserPermission.Write);
+                }
+            }
+            else if (roles.Contains(UserRole.CleaningStaff))
+            {
+                // Cleaning staff have read permission only
+                permissions.Add(UserPermission.Read);
+            }
+            else if (roles.Contains(UserRole.Guest))
+            {
+                // Regular users have no special permissions
+                permissions.Add(UserPermission.None);
+            }
+
+            return permissions.Distinct();
+        }
+
+        /// <summary>
+        /// Checks if a user has a specific permission
+        /// </summary>
+        public async Task<bool> HasPermissionAsync(int userId, UserPermission permission)
+        {
+            if (permission == UserPermission.None)
+            {
+                return true; // Everyone has "None" permission
+            }
+
+            var userPermissions = await GetUserPermissionsAsync(userId);
+
+            // Check if the user has Full permission (which includes all permissions)
+            if (userPermissions.Contains(UserPermission.Full))
+            {
+                return true;
+            }
+
+            // Check if the user has the specific permission 
+            // If permission is a combined flag (e.g., ReadWrite), check if the user has all required permissions
+            return userPermissions.Any(p => (p & permission) == permission);
+        }
+
+        /// <summary>
+        /// Checks if a user has at least the specified role
+        /// </summary>
+        public async Task<bool> HasRoleAsync(int userId, UserRole minimumRole)
+        {
+            var highestRole = await GetHighestRoleAsync(userId);
+            return highestRole >= minimumRole;
+        }
+
+        /// <summary>
+        /// Assigns a role to a user
+        /// </summary>
+        public async Task<bool> AssignRoleToUserAsync(int userId, UserRole role, int adminId)
+        {
+            // Validate user exists
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return false;
+            }
+
+            // Special handling for Admin role - use the legacy system
+            if (role == UserRole.Admin)
+            {
+                user.IsAdmin = true;
+                _context.Entry(user).State = EntityState.Modified;
+
+                // Log the action
+                await LogSecurityEventAsync(
+                    userId,
+                    "RoleAssigned",
+                    GetClientIpAddress(),
+                    $"Admin role assigned by admin ID {adminId}");
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+
+            // For other roles, in a real implementation, you would store this in a database table
+            // For now, we'll just log the action and return true
+            await LogSecurityEventAsync(
+                userId,
+                "RoleAssigned",
+                GetClientIpAddress(),
+                $"Role {role} assigned by admin ID {adminId}");
+
+            return true;
+        }
+
+        /// <summary>
+        /// Removes a role from a user
+        /// </summary>
+        public async Task<bool> RemoveRoleFromUserAsync(int userId, UserRole role, int adminId)
+        {
+            // Validate user exists
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return false;
+            }
+
+            // Special handling for Admin role - use the legacy system
+            if (role == UserRole.Admin)
+            {
+                user.IsAdmin = false;
+                _context.Entry(user).State = EntityState.Modified;
+
+                // Log the action
+                await LogSecurityEventAsync(
+                    userId,
+                    "RoleRemoved",
+                    GetClientIpAddress(),
+                    $"Admin role removed by admin ID {adminId}");
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+
+            // For other roles, in a real implementation, you would remove it from a database table
+            // For now, we'll just log the action and return true
+            await LogSecurityEventAsync(
+                userId,
+                "RoleRemoved",
+                GetClientIpAddress(),
+                $"Role {role} removed by admin ID {adminId}");
+
+            return true;
+        }
+
+        /// <summary>
+        /// Sets permissions for a user (primarily for Partner role)
+        /// </summary>
+        public async Task<bool> SetUserPermissionsAsync(int userId, UserPermission permissions, int adminId)
+        {
+            // Validate user exists
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return false;
+            }
+
+            // In a real implementation, you would store this in a database table
+            // For now, we'll just log the action and return true
+            await LogSecurityEventAsync(
+                userId,
+                "PermissionsChanged",
+                GetClientIpAddress(),
+                $"Permissions set to {permissions} by admin ID {adminId}");
+
+            return true;
+        }
+
         #endregion
 
         #region Utility Methods
@@ -1030,29 +1418,36 @@ namespace ChabbyNb_API.Services
                 return Convert.ToBase64String(tokenBytes);
             }
         }
-    }
 
-    /// <summary>
-    /// Class representing a security event
-    /// </summary>
-    public class SecurityEvent
-    {
-        public int UserId { get; set; }
-        public string EventType { get; set; }
-        public DateTime Timestamp { get; set; }
-        public string IpAddress { get; set; }
-        public string Details { get; set; }
-    }
+        /// <summary>
+        /// Gets the client IP address from the current request
+        /// </summary>
+        private string GetClientIpAddress()
+        {
+            // Try to get the forwarded IP if behind a proxy
+            string ip = _httpContextAccessor.HttpContext?.Request.Headers["X-Forwarded-For"].FirstOrDefault();
 
-    /// <summary>
-    /// Class representing token operation results
-    /// </summary>
-    public class TokenResult
-    {
-        public string AccessToken { get; set; }
-        public string RefreshToken { get; set; }
-        public DateTime AccessTokenExpiration { get; set; }
-        public DateTime RefreshTokenExpiration { get; set; }
+            // If no forwarded IP, use the remote IP
+            if (string.IsNullOrEmpty(ip))
+            {
+                ip = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
+            }
+
+            // If still no IP, use a default
+            if (string.IsNullOrEmpty(ip))
+            {
+                ip = "127.0.0.1";
+            }
+
+            // If multiple IPs (comma separated), take the first one
+            if (ip.Contains(","))
+            {
+                ip = ip.Split(',')[0].Trim();
+            }
+
+            return ip;
+        }
+
+        #endregion
     }
-    #endregion
 }
