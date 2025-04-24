@@ -1,5 +1,6 @@
 using ChabbyNb.Models;
 using ChabbyNb_API.Models;
+using ChabbyNb_API.Models.DTOs;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChabbyNb_API.Data
@@ -28,14 +29,28 @@ namespace ChabbyNb_API.Data
         public DbSet<ChatConversation> ChatConversations { get; set; }
         public DbSet<ChatMessage> ChatMessages { get; set; }
         public DbSet<MessageTemplate> MessageTemplates { get; set; }
-        // Removed: public DbSet<UserRoleAssignment> UserRoleAssignments { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<UserSecurityEvent> UserSecurityEvents { get; set; }
         public DbSet<UserAccountLockout> UserAccountLockouts { get; set; }
+        public DbSet<UserRoleAssignment> UserRoleAssignments { get; set; }
+        public DbSet<UserPermission> UserPermissions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<UserRoleAssignment>()
+                .HasOne(ura => ura.User)
+                .WithMany()
+                .HasForeignKey(ura => ura.UserID)
+                .OnDelete(DeleteBehavior.Cascade); // Keep cascade here if deletion should wipe assignments
+
+            modelBuilder.Entity<UserRoleAssignment>()
+                .HasOne(ura => ura.AssignedBy)
+                .WithMany()
+                .HasForeignKey(ura => ura.AssignedByID)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent multiple cascade paths
+
 
             // Configure Decimal properties with precision
             modelBuilder.Entity<Apartment>()

@@ -33,48 +33,6 @@
   },
   {
     "ContainingType": "ChabbyNb_API.Controllers.AccountController",
-    "Method": "Login",
-    "RelativePath": "api/Account/Login",
-    "HttpMethod": "POST",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "model",
-        "Type": "ChabbyNb_API.Models.DTOs.LoginDto",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": [
-      {
-        "Type": "ChabbyNb_API.Models.DTOs.LoginResultDto",
-        "MediaTypes": [
-          "text/plain",
-          "application/json",
-          "text/json"
-        ],
-        "StatusCode": 200
-      }
-    ]
-  },
-  {
-    "ContainingType": "ChabbyNb_API.Controllers.AccountController",
-    "Method": "Logout",
-    "RelativePath": "api/Account/Logout",
-    "HttpMethod": "POST",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "model",
-        "Type": "ChabbyNb_API.Models.DTOs.LogoutDto",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "ChabbyNb_API.Controllers.AccountController",
     "Method": "UpdateProfile",
     "RelativePath": "api/Account/Profile",
     "HttpMethod": "PUT",
@@ -88,32 +46,6 @@
       }
     ],
     "ReturnTypes": []
-  },
-  {
-    "ContainingType": "ChabbyNb_API.Controllers.AccountController",
-    "Method": "RefreshToken",
-    "RelativePath": "api/Account/RefreshToken",
-    "HttpMethod": "POST",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "model",
-        "Type": "ChabbyNb_API.Models.DTOs.RefreshTokenDto",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": [
-      {
-        "Type": "ChabbyNb_API.Models.DTOs.LoginResultDto",
-        "MediaTypes": [
-          "text/plain",
-          "application/json",
-          "text/json"
-        ],
-        "StatusCode": 200
-      }
-    ]
   },
   {
     "ContainingType": "ChabbyNb_API.Controllers.AccountController",
@@ -901,131 +833,6 @@
   },
   {
     "ContainingType": "ChabbyNb_API.Controllers.ApartmentsController",
-    "Method": "SetPrimaryImage",
-    "RelativePath": "api/Apartments/{apartmentId}/Images/{imageId}/SetPrimary",
-    "HttpMethod": "PATCH",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "apartmentId",
-        "Type": "System.Int32",
-        "IsRequired": true
-      },
-      {
-        "Name": "imageId",
-        "Type": "System.Int32",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "ChabbyNb_API.Controllers.ApartmentsController",
-    "Method": "AddMultipleImages",
-    "RelativePath": "api/Apartments/{apartmentId}/Images/AddMultiple",
-    "HttpMethod": "POST",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "apartmentId",
-        "Type": "System.Int32",
-        "IsRequired": true
-      },
-      {
-        "Name": "Images",
-        "Type": "System.Collections.Generic.List\u00601[[Microsoft.AspNetCore.Http.IFormFile, Microsoft.AspNetCore.Http.Features, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60]]",
-        "IsRequired": false
-      },
-      {
-        "Name": "Captions",
-        "Type": "System.Collections.Generic.List\u00601[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
-      },
-      {
-        "Name": "SetPrimaryImageIndex",
-        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
-      }
-    ],
-    "ReturnTypes": [
-      {
-        "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb_API.Models.DTOs.ApartmentImageDto, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
-        "MediaTypes": [
-          "text/plain",
-          "application/json",
-          "text/json"
-        ],
-        "StatusCode": 200
-      }
-    ]
-  },
-  {
-    "ContainingType": "ChabbyNb_API.Controllers.ApartmentsController",
-    "Method": "BatchDeleteApartmentImages",
-    "RelativePath": "api/Apartments/{apartmentId}/Images/BatchDelete",
-    "HttpMethod": "DELETE",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "apartmentId",
-        "Type": "System.Int32",
-        "IsRequired": true
-      },
-      {
-        "Name": "imageIds",
-        "Type": "System.Collections.Generic.List\u00601[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "ChabbyNb_API.Controllers.ApartmentsController",
-    "Method": "BatchUpdateImageCaptions",
-    "RelativePath": "api/Apartments/{apartmentId}/Images/BatchUpdateCaptions",
-    "HttpMethod": "PATCH",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "apartmentId",
-        "Type": "System.Int32",
-        "IsRequired": true
-      },
-      {
-        "Name": "updates",
-        "Type": "System.Collections.Generic.List\u00601[[ChabbyNb_API.Models.DTOs.ImageCaptionUpdateDto, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "ChabbyNb_API.Controllers.ApartmentsController",
-    "Method": "ReorderApartmentImages",
-    "RelativePath": "api/Apartments/{apartmentId}/Images/Reorder",
-    "HttpMethod": "PATCH",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "apartmentId",
-        "Type": "System.Int32",
-        "IsRequired": true
-      },
-      {
-        "Name": "imageOrders",
-        "Type": "System.Collections.Generic.List\u00601[[ChabbyNb_API.Controllers.ApartmentsController\u002BImageReorderDto, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "ChabbyNb_API.Controllers.ApartmentsController",
     "Method": "GetPrimaryImage",
     "RelativePath": "api/Apartments/{apartmentId}/PrimaryImage",
     "HttpMethod": "GET",
@@ -1229,26 +1036,6 @@
     "ReturnTypes": [
       {
         "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb.Models.Apartment, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
-        "MediaTypes": [
-          "text/plain",
-          "application/json",
-          "text/json"
-        ],
-        "StatusCode": 200
-      }
-    ]
-  },
-  {
-    "ContainingType": "ChabbyNb_API.Controllers.ApartmentsController",
-    "Method": "GetApartmentsForMap",
-    "RelativePath": "api/Apartments/Map",
-    "HttpMethod": "GET",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [],
-    "ReturnTypes": [
-      {
-        "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb_API.Models.DTOs.ApartmentMapDto, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
         "MediaTypes": [
           "text/plain",
           "application/json",

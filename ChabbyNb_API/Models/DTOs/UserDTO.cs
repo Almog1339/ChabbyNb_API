@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.AspNetCore.Http;
 
 namespace ChabbyNb_API.Models.DTOs
@@ -229,6 +230,56 @@ namespace ChabbyNb_API.Models.DTOs
     {
         public string Subject { get; set; }
         public string Message { get; set; }
+    }
+
+    public class UserRoleAssignment
+    {
+        [Key]
+        public int AssignmentID { get; set; }
+
+        [Required]
+        public int UserID { get; set; }
+
+        [Required]
+        [StringLength(50)]
+        public string RoleName { get; set; }
+
+        [Required]
+        public int AssignedByID { get; set; }
+
+        [Required]
+        public DateTime AssignedDate { get; set; }
+
+        [ForeignKey("UserID")]
+        public virtual User User { get; set; }
+
+        [ForeignKey("AssignedByID")]
+        public virtual User AssignedBy { get; set; }
+    }
+
+    public class UserPermission
+    {
+        [Key]
+        public int PermissionID { get; set; }
+
+        [Required]
+        public int UserID { get; set; }
+
+        [Required]
+        [StringLength(50)]
+        public string Permission { get; set; }
+
+        [Required]
+        public int AssignedByID { get; set; }
+
+        [Required]
+        public DateTime AssignedDate { get; set; }
+
+        [ForeignKey("UserID")]
+        public virtual User User { get; set; }
+
+        [ForeignKey("AssignedByID")]
+        public virtual User AssignedBy { get; set; }
     }
 
     #endregion

@@ -298,3 +298,6 @@ C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net8.0\ChabbyNb_API.staticwebassets.runtime.json
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net8.0\Newtonsoft.Json.dll
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net8.0\Stripe.net.dll
+C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net8.0\FluentValidation.dll
+C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net8.0\FluentValidation.AspNetCore.dll
+C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net8.0\FluentValidation.DependencyInjectionExtensions.dll

@@ -10,6 +10,9 @@ using ChabbyNb_API.Services.Auth;
 using Microsoft.AspNetCore.Authorization;
 using ChabbyNb_API.Services.Iterfaces;
 using System.Security.Claims;
+using ChabbyNb_API.Validation;
+using FluentValidation.AspNetCore;
+using FluentValidation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -78,8 +81,17 @@ builder.Services.AddScoped<IPaymentService, StripePaymentService>();
 
 // Add our new authentication services
 builder.Services.AddHttpContextAccessor(); // Add this line to register IHttpContextAccessor
-builder.Services.AddScoped<IAccountLockoutService, AccountLockoutService>();
-builder.Services.AddScoped<IAccountLockoutService, AccountLockoutService>();
+// Add Services
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IApartmentService, ApartmentService>();
+builder.Services.AddScoped<IAmenityService, AmenityService>();
+builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<IPricingService, PricingService>();
+builder.Services.AddScoped<IMapper, SimpleMapper>();
+
+// Add FluentValidation
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<ApartmentCreateDtoValidator>();
 
 
 // Register authorization handlers
