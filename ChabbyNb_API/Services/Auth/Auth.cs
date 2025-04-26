@@ -113,10 +113,10 @@ namespace ChabbyNb_API.Services.Auth
             ILogger<AuthService> logger,
             IHttpContextAccessor httpContextAccessor)
         {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
-            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
+            _context = context;
+            _configuration = configuration;
+            _logger = logger ;
+            _httpContextAccessor = httpContextAccessor ;
 
             // Load settings from configuration
             _jwtKey = _configuration["Jwt:Key"];

@@ -26,7 +26,7 @@ namespace ChabbyNb_API.Controllers
             ChabbyNbDbContext context,
             IWebHostEnvironment webHostEnvironment,
             ILogger<MembersController> logger)
-            : base(context, logger)
+            : base(context, (ILogger<AccountController>)logger)
         {
             _webHostEnvironment = webHostEnvironment;
         }

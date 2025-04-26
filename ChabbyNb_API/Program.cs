@@ -69,40 +69,28 @@ if (string.IsNullOrEmpty(builder.Environment.WebRootPath))
     Directory.CreateDirectory(builder.Environment.WebRootPath);
 }
 
-// Add database context
+
 builder.Services.AddDbContext<ChabbyNbDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Add session services (we'll keep these for backward compatibility during transition)
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddScoped<IPaymentService, StripePaymentService>();
-
-// Add our new authentication services
-builder.Services.AddHttpContextAccessor(); // Add this line to register IHttpContextAccessor
-// Add Services
+builder.Services.AddHttpContextAccessor(); 
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IApartmentService, ApartmentService>();
 builder.Services.AddScoped<IAmenityService, AmenityService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IPricingService, PricingService>();
 builder.Services.AddScoped<IMapper, SimpleMapper>();
-
-// Add FluentValidation
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<ApartmentCreateDtoValidator>();
-
-
-// Register authorization handlers
 builder.Services.AddScoped<IAuthorizationHandler, RoleAuthorizationHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, HousekeepingAuthorizationHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, ReadOnlyAuthorizationHandler>();
-
-// Add background services
 builder.Services.AddHostedService<BookingExpirationService>();
-
-// Add session (for backward compatibility)
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -111,7 +99,7 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-// Configure JWT Authentication
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;

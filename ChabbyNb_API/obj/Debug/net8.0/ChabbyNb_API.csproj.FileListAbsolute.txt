@@ -301,3 +301,4 @@ C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net8.0\FluentValidation.dll
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net8.0\FluentValidation.AspNetCore.dll
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net8.0\FluentValidation.DependencyInjectionExtensions.dll
+C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt

@@ -15,13 +15,96 @@ namespace ChabbyNb_API.Controllers
     public class AccountController : BaseApiController
     {
         private readonly IUserService _userService;
+        protected readonly IAuthService _authService;
 
-        public AccountController(
-            IUserService userService,
-            ILogger<AccountController> logger)
+        public AccountController( IUserService userService,
+            ILogger<AccountController> logger,
+            IAuthService authService)
             : base(context: null, logger) // The context is now managed by the service
         {
             _userService = userService ?? throw new ArgumentNullException(nameof(userService));
+            _authService = authService;
+        }
+
+        /// <summary>
+        /// Login with email/password or reservation number
+        /// </summary>
+        [HttpPost("Login")]
+        public async Task<ActionResult<LoginResultDto>> Login([FromBody] LoginDto model)
+        {
+            if (!ModelState.IsValid)
+            {
+                // Change the return type to match ActionResult<LoginResultDto>
+                return BadRequest(new LoginResultDto
+                {
+                    Success = false,
+                    Message = "Invalid login data"
+                });
+            }
+
+            try
+            {
+                var ipAddress = GetClientIpAddress();
+                var result = await _authService.AuthenticateAsync(model, ipAddress);
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new LoginResultDto
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during login");
+                return StatusCode(500, new LoginResultDto
+                {
+                    Success = false,
+                    Message = "Error during login"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Refresh an authentication token
+        /// </summary>
+        [HttpPost("RefreshToken")]
+        public async Task<ActionResult<LoginResultDto>> RefreshToken([FromBody] RefreshTokenDto model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new LoginResultDto
+                {
+                    Success = false,
+                    Message = "Invalid refresh token data"
+                });
+            }
+
+            try
+            {
+                var ipAddress = GetClientIpAddress();
+                var result = await _authService.RefreshTokenAsync(model.RefreshToken, model.AccessToken, ipAddress);
+
+                return Ok(new LoginResultDto
+                {
+                    Success = true,
+                    Message = "Token refreshed successfully",
+                    Token = result.AccessToken,
+                    RefreshToken = result.RefreshToken,
+                    TokenExpiration = result.AccessTokenExpiration
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing token");
+                return StatusCode(500, new LoginResultDto
+                {
+                    Success = false,
+                    Message = "Error refreshing token"
+                });
+            }
         }
 
         /// <summary>

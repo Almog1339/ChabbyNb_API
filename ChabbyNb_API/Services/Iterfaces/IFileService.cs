@@ -54,8 +54,8 @@ namespace ChabbyNb_API.Services
             IWebHostEnvironment webHostEnvironment,
             ILogger<LocalFileStorageService> logger)
         {
-            _webHostEnvironment = webHostEnvironment ?? throw new ArgumentNullException(nameof(webHostEnvironment));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _webHostEnvironment = webHostEnvironment;
+            _logger = logger;
         }
 
         /// <summary>

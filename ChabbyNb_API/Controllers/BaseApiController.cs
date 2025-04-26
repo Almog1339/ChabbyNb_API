@@ -21,14 +21,16 @@ namespace ChabbyNb_API.Controllers
         protected readonly ILogger _logger;
         protected readonly IAuthService _authService;
 
-        protected BaseApiController(
-            ChabbyNbDbContext context,
-            ILogger logger,
-            IAuthService authService = null)
+        protected BaseApiController(ChabbyNbDbContext context,ILogger logger,IAuthService authService)
         {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _context = context ;
+            _logger = logger;
             _authService = authService;
+        }
+
+        protected BaseApiController(object context, ILogger<AccountController> logger)
+        {
+            _logger = logger;
         }
 
         #region User Information Methods
