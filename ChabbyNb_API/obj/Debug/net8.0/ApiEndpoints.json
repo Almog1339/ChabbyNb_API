@@ -59,6 +59,32 @@
   },
   {
     "ContainingType": "ChabbyNb_API.Controllers.AccountController",
+    "Method": "Logout",
+    "RelativePath": "api/Account/Logout",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "model",
+        "Type": "ChabbyNb_API.Models.DTOs.LogoutDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.AccountController",
+    "Method": "GetProfile",
+    "RelativePath": "api/Account/Profile",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.AccountController",
     "Method": "UpdateProfile",
     "RelativePath": "api/Account/Profile",
     "HttpMethod": "PUT",
@@ -715,7 +741,7 @@
     "Parameters": [],
     "ReturnTypes": [
       {
-        "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb.Models.Apartment, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb_API.Services.ApartmentDto, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
         "MediaTypes": [
           "text/plain",
           "application/json",
@@ -826,7 +852,7 @@
     ],
     "ReturnTypes": [
       {
-        "Type": "ChabbyNb.Models.Apartment",
+        "Type": "ChabbyNb_API.Services.ApartmentDto",
         "MediaTypes": [
           "text/plain",
           "application/json",
@@ -925,7 +951,7 @@
     ],
     "ReturnTypes": [
       {
-        "Type": "ChabbyNb.Models.Apartment",
+        "Type": "ChabbyNb_API.Services.ApartmentDto",
         "MediaTypes": [
           "text/plain",
           "application/json",
@@ -1070,8 +1096,8 @@
         "IsRequired": true
       },
       {
-        "Name": "isActive",
-        "Type": "System.Boolean",
+        "Name": "statusDto",
+        "Type": "ChabbyNb_API.Controllers.UpdateApartmentStatusDto",
         "IsRequired": true
       }
     ],
@@ -1084,10 +1110,36 @@
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
+    "Parameters": [
+      {
+        "Name": "count",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb_API.Services.ApartmentDto, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "ChabbyNb_API.Controllers.ApartmentsController",
+    "Method": "GetApartmentsForMap",
+    "RelativePath": "api/Apartments/Map",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
     "Parameters": [],
     "ReturnTypes": [
       {
-        "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb.Models.Apartment, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb_API.Models.DTOs.ApartmentMapDto, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
         "MediaTypes": [
           "text/plain",
           "application/json",
@@ -1127,13 +1179,13 @@
       },
       {
         "Name": "petFriendly",
-        "Type": "System.Boolean",
+        "Type": "System.Nullable\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
         "IsRequired": false
       }
     ],
     "ReturnTypes": [
       {
-        "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb.Models.Apartment, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[ChabbyNb_API.Services.ApartmentDto, ChabbyNb_API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
         "MediaTypes": [
           "text/plain",
           "application/json",

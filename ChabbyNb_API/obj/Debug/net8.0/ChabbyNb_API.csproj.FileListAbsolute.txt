@@ -281,12 +281,6 @@ C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\staticwebassets.build.json
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\staticwebassets.development.json
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\staticwebassets.build.endpoints.json
-C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\staticwebassets\msbuild.ChabbyNb_API.Microsoft.AspNetCore.StaticWebAssets.props
-C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\staticwebassets\msbuild.ChabbyNb_API.Microsoft.AspNetCore.StaticWebAssetEndpoints.props
-C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\staticwebassets\msbuild.build.ChabbyNb_API.props
-C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\staticwebassets\msbuild.buildMultiTargeting.ChabbyNb_API.props
-C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\staticwebassets\msbuild.buildTransitive.ChabbyNb_API.props
-C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\staticwebassets.pack.json
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\ChabbyNb.DC7212DE.Up2Date
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\ChabbyNb_API.dll
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\refint\ChabbyNb_API.dll
@@ -302,3 +296,4 @@ C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net8.0\FluentValidation.AspNetCore.dll
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\bin\Debug\net8.0\FluentValidation.DependencyInjectionExtensions.dll
 C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
+C:\Users\almog\OneDrive\Documents\GitHub\ChabbyNb_API\ChabbyNb_API\obj\Debug\net8.0\staticwebassets.build.json.cache

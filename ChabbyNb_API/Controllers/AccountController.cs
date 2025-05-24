@@ -5,26 +5,131 @@ using ChabbyNb_API.Services;
 using ChabbyNb_API.Controllers;
 using ChabbyNb_API.Models;
 using ChabbyNb_API.Services.Auth;
+using ChabbyNb_API.Services.Core;
+using ChabbyNb_API.Data;
 using System.Security.Claims;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 
 namespace ChabbyNb_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AccountController : BaseApiController
+    public class AccountController : ControllerBase
     {
         private readonly IUserService _userService;
-        protected readonly IAuthService _authService;
+        private readonly IAuthService _authService;
+        private readonly ChabbyNbDbContext _context;
+        private readonly ILogger<AccountController> _logger;
 
-        public AccountController( IUserService userService,
-            ILogger<AccountController> logger,
-            IAuthService authService)
-            : base(context: null, logger) // The context is now managed by the service
+        public AccountController(
+            IUserService userService,
+            IAuthService authService,
+            ChabbyNbDbContext context,
+            ILogger<AccountController> logger)
         {
             _userService = userService ?? throw new ArgumentNullException(nameof(userService));
-            _authService = authService;
+            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
+
+        #region Helper Methods
+
+        private int? GetCurrentUserId()
+        {
+            if (!User.Identity.IsAuthenticated)
+                return null;
+
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                return null;
+
+            return userId;
+        }
+
+        private string GetClientIpAddress()
+        {
+            string ip = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+
+            if (string.IsNullOrEmpty(ip))
+            {
+                ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            }
+
+            if (string.IsNullOrEmpty(ip))
+            {
+                ip = "127.0.0.1";
+            }
+
+            if (ip.Contains(","))
+            {
+                ip = ip.Split(',').First().Trim();
+            }
+
+            return ip;
+        }
+
+        private object CreateApiResponse(bool success, string message = null, object data = null)
+        {
+            return new
+            {
+                success,
+                message,
+                data,
+                timestamp = DateTime.UtcNow
+            };
+        }
+
+        private IActionResult ApiSuccess(string message = null, object data = null)
+        {
+            return Ok(CreateApiResponse(true, message, data));
+        }
+
+        private IActionResult ApiError(string message, object data = null, int statusCode = 400)
+        {
+            return StatusCode(statusCode, CreateApiResponse(false, message, data));
+        }
+
+        private IActionResult ValidationError(string message)
+        {
+            return BadRequest(CreateApiResponse(false, message));
+        }
+
+        private IActionResult HandleException(Exception ex, string message = null)
+        {
+            string errorMessage = message ?? "An error occurred while processing your request";
+            _logger.LogError(ex, errorMessage);
+
+            int statusCode = ex switch
+            {
+                UnauthorizedAccessException => 401,
+                InvalidOperationException => 400,
+                ArgumentException => 400,
+                KeyNotFoundException => 404,
+                DbUpdateException => 500,
+                _ => 500
+            };
+
+            object details = null;
+            if (HttpContext.Request.Headers.ContainsKey("X-Environment") &&
+                HttpContext.Request.Headers["X-Environment"] == "Development")
+            {
+                details = new
+                {
+                    exceptionType = ex.GetType().Name,
+                    exceptionMessage = ex.Message,
+                    stackTrace = ex.StackTrace
+                };
+            }
+
+            return ApiError(errorMessage, details, statusCode);
+        }
+
+        #endregion
+
+        #region Authentication Endpoints
 
         /// <summary>
         /// Login with email/password or reservation number
@@ -34,7 +139,6 @@ namespace ChabbyNb_API.Controllers
         {
             if (!ModelState.IsValid)
             {
-                // Change the return type to match ActionResult<LoginResultDto>
                 return BadRequest(new LoginResultDto
                 {
                     Success = false,
@@ -120,10 +224,10 @@ namespace ChabbyNb_API.Controllers
 
             try
             {
-                var user = await _userService.RegisterUserAsync(model);
+                var user = await _userService.CreateAsync(model);
 
                 return ApiSuccess("Registration successful. Please check your email to verify your account.",
-                    new { userId = user.UserID, email = user.Email });
+                    new { userId = user.UserId, email = user.Email });
             }
             catch (InvalidOperationException ex)
             {
@@ -136,10 +240,68 @@ namespace ChabbyNb_API.Controllers
         }
 
         /// <summary>
+        /// Logout user
+        /// </summary>
+        [HttpPost("Logout")]
+        [Authorize]
+        public async Task<IActionResult> Logout([FromBody] LogoutDto model)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId.HasValue && !string.IsNullOrEmpty(model.RefreshToken))
+                {
+                    
+                    //await _authService.RevokeTokenAsync(model.RefreshToken);
+                }
+
+                return ApiSuccess("Logged out successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during logout");
+                return ApiSuccess("Logged out successfully"); // Still return success to client
+            }
+        }
+
+        #endregion
+
+        #region Profile Management
+
+        /// <summary>
+        /// Get current user profile
+        /// </summary>
+        [HttpGet("Profile")]
+        [Authorize]
+        public async Task<IActionResult> GetProfile()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (!userId.HasValue)
+                {
+                    return Unauthorized(CreateApiResponse(false, "User not authenticated"));
+                }
+
+                var user = await _userService.GetByIdAsync(userId.Value);
+                if (user == null)
+                {
+                    return NotFound(CreateApiResponse(false, "User not found"));
+                }
+
+                return ApiSuccess("Profile retrieved successfully", user);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "Error retrieving profile");
+            }
+        }
+
+        /// <summary>
         /// Update user profile
         /// </summary>
         [HttpPut("Profile")]
-        [Authorize(Policy = "RequireGuest")]
+        [Authorize]
         public async Task<IActionResult> UpdateProfile([FromBody] ProfileDto model)
         {
             if (!ModelState.IsValid)
@@ -155,23 +317,13 @@ namespace ChabbyNb_API.Controllers
                     return Unauthorized(CreateApiResponse(false, "User not authenticated"));
                 }
 
-                var result = await _userService.UpdateUserProfileAsync(userId.Value, model);
-                if (!result)
+                var updatedUser = await _userService.UpdateAsync(userId.Value, model);
+                if (updatedUser == null)
                 {
                     return NotFound(CreateApiResponse(false, "User not found"));
                 }
 
-                var user = await _userService.GetUserByIdAsync(userId.Value);
-
-                return ApiSuccess("Profile updated successfully", new
-                {
-                    userId = user.UserID,
-                    username = user.Username,
-                    email = user.Email,
-                    firstName = user.FirstName,
-                    lastName = user.LastName,
-                    phoneNumber = user.PhoneNumber
-                });
+                return ApiSuccess("Profile updated successfully", updatedUser);
             }
             catch (InvalidOperationException ex)
             {
@@ -187,7 +339,7 @@ namespace ChabbyNb_API.Controllers
         /// Change password
         /// </summary>
         [HttpPut("ChangePassword")]
-        [Authorize(Policy = "RequireGuest")]
+        [Authorize]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto model)
         {
             if (!ModelState.IsValid)
@@ -205,13 +357,13 @@ namespace ChabbyNb_API.Controllers
 
                 var result = await _userService.ChangePasswordAsync(userId.Value, model);
 
-                if (result)
+                if (result.Success)
                 {
                     return ApiSuccess("Password changed successfully. Please log in again with your new password.");
                 }
                 else
                 {
-                    return ApiError("Current password is incorrect", null, 400);
+                    return ApiError(result.Errors.FirstOrDefault() ?? "Failed to change password", null, 400);
                 }
             }
             catch (Exception ex)
@@ -219,6 +371,10 @@ namespace ChabbyNb_API.Controllers
                 return HandleException(ex, "Error changing password");
             }
         }
+
+        #endregion
+
+        #region Password Reset
 
         /// <summary>
         /// Initiate password reset
@@ -233,10 +389,8 @@ namespace ChabbyNb_API.Controllers
 
             try
             {
-                // First find the user
                 var user = await _userService.GetUserByEmailAsync(model.Email);
 
-                // Don't reveal whether the user exists
                 if (user != null)
                 {
                     await _userService.GeneratePasswordResetTokenAsync(user);
@@ -247,7 +401,6 @@ namespace ChabbyNb_API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error initiating password reset");
-                // Still return OK to not reveal whether the email exists
                 return ApiSuccess("If your email is registered, you will receive a password reset link shortly.");
             }
         }
@@ -267,13 +420,13 @@ namespace ChabbyNb_API.Controllers
             {
                 var result = await _userService.ResetPasswordAsync(model.Email, model.Token, model.Password);
 
-                if (result)
+                if (result.Success)
                 {
                     return ApiSuccess("Password has been reset successfully. You can now log in with your new password.");
                 }
                 else
                 {
-                    return ApiError("Invalid or expired reset token", null, 400);
+                    return ApiError(result.Errors.FirstOrDefault() ?? "Invalid or expired reset token", null, 400);
                 }
             }
             catch (Exception ex)
@@ -281,6 +434,10 @@ namespace ChabbyNb_API.Controllers
                 return HandleException(ex, "Error resetting password");
             }
         }
+
+        #endregion
+
+        #region Email Verification
 
         /// <summary>
         /// Verify email
@@ -292,13 +449,13 @@ namespace ChabbyNb_API.Controllers
             {
                 var result = await _userService.VerifyEmailAsync(email, token);
 
-                if (result)
+                if (result.Success)
                 {
                     return ApiSuccess("Email verified successfully. You can now log in.");
                 }
                 else
                 {
-                    return ApiError("Invalid or expired verification link", null, 400);
+                    return ApiError(result.Errors.FirstOrDefault() ?? "Invalid or expired verification link", null, 400);
                 }
             }
             catch (Exception ex)
@@ -322,20 +479,22 @@ namespace ChabbyNb_API.Controllers
             {
                 await _userService.ResendVerificationEmailAsync(model.Email);
 
-                // Don't reveal whether the email exists or was already verified
                 return ApiSuccess("If your email is registered and not verified, you will receive a verification email shortly.");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error resending verification email");
-                // Still return OK to not reveal whether the email exists
                 return ApiSuccess("If your email is registered and not verified, you will receive a verification email shortly.");
             }
         }
 
+        #endregion
+
         #region User Role Management (Admin Only)
 
-        // GET: api/Account/Roles
+        /// <summary>
+        /// Get current user's roles and permissions
+        /// </summary>
         [HttpGet("Roles")]
         [Authorize]
         public async Task<IActionResult> GetUserRoles()
@@ -345,7 +504,7 @@ namespace ChabbyNb_API.Controllers
                 var userId = GetCurrentUserId();
                 if (!userId.HasValue)
                 {
-                    return Unauthorized(CreateResponse(false, "User not authenticated"));
+                    return Unauthorized(CreateApiResponse(false, "User not authenticated"));
                 }
 
                 var roles = await _authService.GetUserRolesAsync(userId.Value);
@@ -365,9 +524,9 @@ namespace ChabbyNb_API.Controllers
             }
         }
 
-        // Admin endpoints for role management
-
-        // GET: api/Account/Users/{userId}/Roles
+        /// <summary>
+        /// Get roles for a specific user (Admin only)
+        /// </summary>
         [HttpGet("Users/{userId}/Roles")]
         [Authorize(Policy = "RequireAdminRole")]
         public async Task<IActionResult> GetRolesForUser(int userId)
@@ -377,7 +536,7 @@ namespace ChabbyNb_API.Controllers
                 var user = await _context.Users.FindAsync(userId);
                 if (user == null)
                 {
-                    return NotFound(CreateResponse(false, "User not found"));
+                    return NotFound(CreateApiResponse(false, "User not found"));
                 }
 
                 var roles = await _authService.GetUserRolesAsync(userId);
@@ -398,7 +557,9 @@ namespace ChabbyNb_API.Controllers
             }
         }
 
-        // POST: api/Account/Users/{userId}/Roles/{role}
+        /// <summary>
+        /// Assign role to user (Admin only)
+        /// </summary>
         [HttpPost("Users/{userId}/Roles/{role}")]
         [Authorize(Policy = "RequireAdminRole")]
         public async Task<IActionResult> AssignRoleToUser(int userId, string role)
@@ -408,19 +569,15 @@ namespace ChabbyNb_API.Controllers
                 var user = await _context.Users.FindAsync(userId);
                 if (user == null)
                 {
-                    return NotFound(CreateResponse(false, "User not found"));
+                    return NotFound(CreateApiResponse(false, "User not found"));
                 }
 
-                // Parse the role
                 if (!Enum.TryParse<UserRole>(role, true, out var userRole))
                 {
                     return ApiError($"Invalid role: {role}", null, 400);
                 }
 
-                // Get admin ID for tracking
                 var adminId = GetCurrentUserId().Value;
-
-                // Assign the role
                 var success = await _authService.AssignRoleToUserAsync(userId, userRole, adminId);
 
                 if (success)
@@ -439,7 +596,9 @@ namespace ChabbyNb_API.Controllers
             }
         }
 
-        // DELETE: api/Account/Users/{userId}/Roles/{role}
+        /// <summary>
+        /// Remove role from user (Admin only)
+        /// </summary>
         [HttpDelete("Users/{userId}/Roles/{role}")]
         [Authorize(Policy = "RequireAdminRole")]
         public async Task<IActionResult> RemoveRoleFromUser(int userId, string role)
@@ -449,19 +608,15 @@ namespace ChabbyNb_API.Controllers
                 var user = await _context.Users.FindAsync(userId);
                 if (user == null)
                 {
-                    return NotFound(CreateResponse(false, "User not found"));
+                    return NotFound(CreateApiResponse(false, "User not found"));
                 }
 
-                // Parse the role
                 if (!Enum.TryParse<UserRole>(role, true, out var userRole))
                 {
                     return ApiError($"Invalid role: {role}", null, 400);
                 }
 
-                // Get admin ID for tracking
                 var adminId = GetCurrentUserId().Value;
-
-                // Remove the role
                 var success = await _authService.RemoveRoleFromUserAsync(userId, userRole, adminId);
 
                 if (success)
@@ -480,9 +635,9 @@ namespace ChabbyNb_API.Controllers
             }
         }
 
-        // Permission management (for Partners)
-
-        // POST: api/Account/Users/{userId}/Permissions
+        /// <summary>
+        /// Set user permissions (Admin only)
+        /// </summary>
         [HttpPost("Users/{userId}/Permissions")]
         [Authorize(Policy = "RequireAdminRole")]
         public async Task<IActionResult> SetUserPermissions(int userId, [FromBody] SetPermissionsDto model)
@@ -492,26 +647,21 @@ namespace ChabbyNb_API.Controllers
                 var user = await _context.Users.FindAsync(userId);
                 if (user == null)
                 {
-                    return NotFound(CreateResponse(false, "User not found"));
+                    return NotFound(CreateApiResponse(false, "User not found"));
                 }
 
-                // Validate user has Partner role
                 var roles = await _authService.GetUserRolesAsync(userId);
                 if (!roles.Contains(UserRole.Partner))
                 {
-                    return BadRequest(CreateResponse(false, "Permissions can only be set for Partner role users"));
+                    return BadRequest(CreateApiResponse(false, "Permissions can only be set for Partner role users"));
                 }
 
-                // Parse the permissions
                 if (!Enum.TryParse<Services.Auth.UserPermission>(model.Permissions, true, out var permissions))
                 {
                     return ApiError($"Invalid permissions: {model.Permissions}", null, 400);
                 }
 
-                // Get admin ID for tracking
                 var adminId = GetCurrentUserId().Value;
-
-                // Set the permissions
                 var success = await _authService.SetUserPermissionsAsync(userId, permissions, adminId);
 
                 if (success)
@@ -530,7 +680,9 @@ namespace ChabbyNb_API.Controllers
             }
         }
 
-        // GET: api/Account/Roles/All
+        /// <summary>
+        /// Get all available roles and permissions (Admin only)
+        /// </summary>
         [HttpGet("Roles/All")]
         [Authorize(Policy = "RequireAdminRole")]
         public IActionResult GetAllRoles()
@@ -551,6 +703,10 @@ namespace ChabbyNb_API.Controllers
                 return HandleException(ex, "Error getting all roles");
             }
         }
+
+        #endregion
+
+        #region Private Helper Methods
 
         private async Task LogAdminAction(string action)
         {
@@ -576,12 +732,17 @@ namespace ChabbyNb_API.Controllers
                 _logger.LogError(ex, $"Error logging admin action: {action}");
             }
         }
+
+        #endregion
     }
+
+    #region Supporting DTOs
+
     public class SetPermissionsDto
     {
         [Required]
         public string Permissions { get; set; }
     }
-    #endregion
 
+    #endregion
 }

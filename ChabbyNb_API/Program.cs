@@ -86,7 +86,6 @@ builder.Services.AddScoped<IPaymentService, StripePaymentService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Business Logic Services (using new unified structure)
-builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IApartmentService, ApartmentService>();
 builder.Services.AddScoped<IAmenityService, AmenityService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
