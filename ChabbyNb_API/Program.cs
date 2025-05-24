@@ -69,28 +69,48 @@ if (string.IsNullOrEmpty(builder.Environment.WebRootPath))
     Directory.CreateDirectory(builder.Environment.WebRootPath);
 }
 
-
+// Database and Core Services
 builder.Services.AddDbContext<ChabbyNbDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddDistributedMemoryCache();
+builder.Services.AddHttpContextAccessor();
+
+// Infrastructure Services
+builder.Services.AddScoped<IMapper, SimpleMapper>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddScoped<IPaymentService, StripePaymentService>();
-builder.Services.AddHttpContextAccessor(); 
-builder.Services.AddScoped<IUserService, UserService>();
+
+// Authentication & Authorization Services
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Business Logic Services (using new unified structure)
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IApartmentService, ApartmentService>();
 builder.Services.AddScoped<IAmenityService, AmenityService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IPricingService, PricingService>();
-builder.Services.AddScoped<IMapper, SimpleMapper>();
+
+// Validation
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<ApartmentCreateDtoValidator>();
+
+// Authorization Handlers
 builder.Services.AddScoped<IAuthorizationHandler, RoleAuthorizationHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, HousekeepingAuthorizationHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, ReadOnlyAuthorizationHandler>();
+
+// Background Services
 builder.Services.AddHostedService<BookingExpirationService>();
+
+// Session Configuration
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {

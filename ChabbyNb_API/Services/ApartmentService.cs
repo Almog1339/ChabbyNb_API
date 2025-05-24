@@ -1,90 +1,209 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using ChabbyNb_API.Data;
 using ChabbyNb_API.Models;
 using ChabbyNb_API.Models.DTOs;
+using ChabbyNb_API.Services.Core;
 using ChabbyNb.Models;
-using System.Linq;
-using Microsoft.AspNetCore.Http;
 
 namespace ChabbyNb_API.Services
 {
-    public interface IApartmentService
+    public interface IApartmentService :
+        IEntityService<Apartment, ApartmentDto, ApartmentCreateDto, ApartmentUpdateDto>,
+        ISearchableService<ApartmentDto>
     {
-        Task<IEnumerable<Apartment>> GetAllApartmentsAsync();
-        Task<IEnumerable<Apartment>> GetFeaturedApartmentsAsync();
-        Task<Apartment> GetApartmentByIdAsync(int id);
-        Task<IEnumerable<Apartment>> SearchApartmentsAsync(string query, int? minPrice, int? maxPrice, int? bedrooms, bool petFriendly);
-        Task<Apartment> CreateApartmentAsync(ApartmentCreateDto dto);
-        Task<bool> UpdateApartmentAsync(int id, ApartmentUpdateDto dto);
-        Task<bool> UpdateApartmentStatusAsync(int id, bool isActive);
-        Task<bool> DeleteApartmentImageAsync(int apartmentId, int imageId);
-        Task<List<ApartmentImageDto>> GetApartmentImagesAsync(int apartmentId);
+        Task<IEnumerable<ApartmentDto>> GetFeaturedApartmentsAsync(int count = 3);
+        Task<IEnumerable<ApartmentDto>> SearchApartmentsAsync(
+            string query = "", int? minPrice = null, int? maxPrice = null,
+            int? bedrooms = null, bool? petFriendly = null);
+        Task<ServiceResult> UpdateApartmentStatusAsync(int id, bool isActive);
+        Task<ServiceResult> DeleteApartmentImageAsync(int apartmentId, int imageId);
+        Task<IEnumerable<ApartmentImageDto>> GetApartmentImagesAsync(int apartmentId);
         Task<ApartmentImageDto> GetPrimaryImageAsync(int apartmentId);
+        Task<IEnumerable<ApartmentMapDto>> GetApartmentsForMapAsync();
     }
 
-    public class ApartmentService : IApartmentService
+    public class ApartmentService : BaseEntityService<Apartment, ApartmentDto, ApartmentCreateDto, ApartmentUpdateDto>,
+        IApartmentService
     {
-        private readonly ChabbyNbDbContext _context;
-        private readonly IMapper _mapper;
         private readonly IFileStorageService _fileStorage;
 
-        public ApartmentService(ChabbyNbDbContext context, IMapper mapper, IFileStorageService fileStorage)
+        public ApartmentService(
+            ChabbyNbDbContext context,
+            IMapper mapper,
+            ILogger<ApartmentService> logger,
+            IFileStorageService fileStorage)
+            : base(context, mapper, logger)
         {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
-            _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _fileStorage = fileStorage ?? throw new ArgumentNullException(nameof(fileStorage));
         }
 
-        public async Task<IEnumerable<Apartment>> GetAllApartmentsAsync()
-        {
-            return await _context.Apartments
-                .Where(a => a.IsActive)
-                .Include(a => a.ApartmentImages)
-                .ToListAsync();
-        }
+        #region Base Service Implementation
 
-        public async Task<IEnumerable<Apartment>> GetFeaturedApartmentsAsync()
+        protected override async Task<Apartment> GetEntityByIdAsync(int id)
         {
-            return await _context.Apartments
-                .Where(a => a.IsActive)
-                .Include(a => a.Reviews)
-                .Include(a => a.ApartmentImages)
-                .OrderByDescending(a => a.Reviews.Any() ? a.Reviews.Average(r => r.Rating) : 0)
-                .Take(3)
-                .ToListAsync();
-        }
-
-        public async Task<Apartment> GetApartmentByIdAsync(int id)
-        {
-            var apartment = await _context.Apartments
+            return await _dbSet
                 .Include(a => a.ApartmentImages)
                 .Include(a => a.ApartmentAmenities)
                     .ThenInclude(aa => aa.Amenity)
                 .Include(a => a.Reviews)
                     .ThenInclude(r => r.User)
                 .FirstOrDefaultAsync(a => a.ApartmentID == id);
+        }
 
-            if (apartment == null || !apartment.IsActive)
+        protected override IQueryable<Apartment> GetBaseQuery()
+        {
+            return _dbSet
+                .Where(a => a.IsActive)
+                .Include(a => a.ApartmentImages)
+                .Include(a => a.ApartmentAmenities)
+                    .ThenInclude(aa => aa.Amenity);
+        }
+
+        protected override async Task<ApartmentDto> MapToDto(Apartment entity)
+        {
+            return new ApartmentDto
             {
-                return null;
-            }
+                ApartmentID = entity.ApartmentID,
+                Title = entity.Title,
+                Description = entity.Description,
+                Address = entity.Address,
+                Neighborhood = entity.Neighborhood,
+                PricePerNight = entity.PricePerNight,
+                Bedrooms = entity.Bedrooms,
+                Bathrooms = entity.Bathrooms,
+                MaxOccupancy = entity.MaxOccupancy,
+                SquareMeters = entity.SquareMeters,
+                PetFriendly = entity.PetFriendly,
+                PetFee = entity.PetFee,
+                Latitude = entity.Latitude,
+                Longitude = entity.Longitude,
+                IsActive = entity.IsActive,
+                PrimaryImageUrl = entity.GetPrimaryImageUrl(),
+                AverageRating = entity.GetAverageRating(),
+                ReviewCount = entity.GetReviewCount(),
+                Images = entity.ApartmentImages.Select(i => new ApartmentImageDto
+                {
+                    ImageID = i.ImageID,
+                    ApartmentID = i.ApartmentID,
+                    ImageUrl = i.ImageUrl,
+                    IsPrimary = i.IsPrimary,
+                    Caption = i.Caption,
+                    SortOrder = i.SortOrder
+                }).ToList(),
+                Amenities = entity.ApartmentAmenities.Select(aa => new AmenityDto
+                {
+                    AmenityID = aa.Amenity.AmenityID,
+                    Name = aa.Amenity.Name,
+                    IconBase64 = aa.Amenity.Icon != null ? Convert.ToBase64String(aa.Amenity.Icon) : null,
+                    Category = aa.Amenity.Category
+                }).ToList()
+            };
+        }
+
+        protected override async Task<IEnumerable<ApartmentDto>> MapToDtos(IEnumerable<Apartment> entities)
+        {
+            var tasks = entities.Select(MapToDto);
+            return await Task.WhenAll(tasks);
+        }
+
+        protected override async Task<Apartment> MapFromCreateDto(ApartmentCreateDto createDto)
+        {
+            var apartment = new Apartment
+            {
+                Title = createDto.Title,
+                Description = createDto.Description,
+                Address = createDto.Address,
+                Neighborhood = createDto.Neighborhood,
+                PricePerNight = createDto.PricePerNight,
+                Bedrooms = createDto.Bedrooms,
+                Bathrooms = createDto.Bathrooms,
+                MaxOccupancy = createDto.MaxOccupancy,
+                SquareMeters = createDto.SquareMeters,
+                PetFriendly = createDto.PetFriendly,
+                PetFee = createDto.PetFee,
+                Latitude = createDto.Latitude,
+                Longitude = createDto.Longitude,
+                CreatedDate = DateTime.Now,
+                IsActive = true
+            };
 
             return apartment;
         }
 
-        public async Task<IEnumerable<Apartment>> SearchApartmentsAsync(
-            string query = "",
-            int? minPrice = null,
-            int? maxPrice = null,
-            int? bedrooms = null,
-            bool petFriendly = true)
+        protected override async Task MapFromUpdateDto(ApartmentUpdateDto updateDto, Apartment entity)
         {
-            var apartments = _context.Apartments.Where(a => a.IsActive);
+            entity.Title = updateDto.Title;
+            entity.Description = updateDto.Description;
+            entity.Address = updateDto.Address;
+            entity.Neighborhood = updateDto.Neighborhood;
+            entity.PricePerNight = updateDto.PricePerNight;
+            entity.Bedrooms = updateDto.Bedrooms;
+            entity.Bathrooms = updateDto.Bathrooms;
+            entity.MaxOccupancy = updateDto.MaxOccupancy;
+            entity.SquareMeters = updateDto.SquareMeters;
+            entity.PetFriendly = updateDto.PetFriendly;
+            entity.PetFee = updateDto.PetFee;
+            entity.Latitude = updateDto.Latitude;
+            entity.Longitude = updateDto.Longitude;
+            entity.IsActive = updateDto.IsActive;
+        }
 
-            // Apply search query to title, description, and address
+        protected override async Task AfterCreate(Apartment entity, ApartmentCreateDto createDto)
+        {
+            // Add amenities
+            if (createDto.AmenityIds != null && createDto.AmenityIds.Length > 0)
+            {
+                await AddAmenitiesToApartment(entity.ApartmentID, createDto.AmenityIds);
+            }
+
+            // Process images
+            await ProcessApartmentImages(entity, createDto);
+        }
+
+        protected override async Task AfterUpdate(Apartment entity, ApartmentUpdateDto updateDto)
+        {
+            // Update amenities
+            await UpdateApartmentAmenities(entity.ApartmentID, updateDto.AmenityIds);
+
+            // Process new images if any
+            await ProcessApartmentImages(entity, updateDto);
+        }
+
+        #endregion
+
+        #region IApartmentService Implementation
+
+        public async Task<IEnumerable<ApartmentDto>> GetFeaturedApartmentsAsync(int count = 3)
+        {
+            var apartments = await _dbSet
+                .Where(a => a.IsActive)
+                .Include(a => a.Reviews)
+                .Include(a => a.ApartmentImages)
+                .Include(a => a.ApartmentAmenities)
+                    .ThenInclude(aa => aa.Amenity)
+                .OrderByDescending(a => a.Reviews.Any() ? a.Reviews.Average(r => r.Rating) : 0)
+                .Take(count)
+                .ToListAsync();
+
+            return await MapToDtos(apartments);
+        }
+
+        public async Task<IEnumerable<ApartmentDto>> SearchAsync(string query)
+        {
+            return await SearchApartmentsAsync(query);
+        }
+
+        public async Task<IEnumerable<ApartmentDto>> SearchApartmentsAsync(
+            string query = "", int? minPrice = null, int? maxPrice = null,
+            int? bedrooms = null, bool? petFriendly = null)
+        {
+            var apartments = _dbSet.Where(a => a.IsActive);
+
             if (!string.IsNullOrEmpty(query))
             {
                 apartments = apartments.Where(a =>
@@ -94,127 +213,198 @@ namespace ChabbyNb_API.Services
                     a.Neighborhood.Contains(query));
             }
 
-            // Apply price filter
             if (minPrice.HasValue)
-            {
                 apartments = apartments.Where(a => a.PricePerNight >= minPrice.Value);
-            }
 
             if (maxPrice.HasValue)
-            {
                 apartments = apartments.Where(a => a.PricePerNight <= maxPrice.Value);
-            }
 
-            // Apply bedrooms filter
             if (bedrooms.HasValue)
-            {
                 apartments = apartments.Where(a => a.Bedrooms >= bedrooms.Value);
-            }
 
-            // Apply pet-friendly filter
-            if (petFriendly)
-            {
-                apartments = apartments.Where(a => a.PetFriendly);
-            }
+            if (petFriendly.HasValue)
+                apartments = apartments.Where(a => a.PetFriendly == petFriendly.Value);
 
-            return await apartments
+            var results = await apartments
                 .Include(a => a.ApartmentImages)
+                .Include(a => a.ApartmentAmenities)
+                    .ThenInclude(aa => aa.Amenity)
+                .ToListAsync();
+
+            return await MapToDtos(results);
+        }
+
+        public async Task<ServiceResult> UpdateApartmentStatusAsync(int id, bool isActive)
+        {
+            var apartment = await GetEntityByIdAsync(id);
+            if (apartment == null)
+                return ServiceResult.ErrorResult("Apartment not found");
+
+            apartment.IsActive = isActive;
+            await _context.SaveChangesAsync();
+
+            return ServiceResult.SuccessResult($"Apartment status updated to {(isActive ? "active" : "inactive")}");
+        }
+
+        public async Task<ServiceResult> DeleteApartmentImageAsync(int apartmentId, int imageId)
+        {
+            var image = await _context.ApartmentImages
+                .FirstOrDefaultAsync(i => i.ImageID == imageId && i.ApartmentID == apartmentId);
+
+            if (image == null)
+                return ServiceResult.ErrorResult("Image not found");
+
+            try
+            {
+                // Delete from storage
+                await _fileStorage.DeleteFileAsync(image.ImageUrl);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, $"Failed to delete image file: {image.ImageUrl}");
+            }
+
+            _context.ApartmentImages.Remove(image);
+            await _context.SaveChangesAsync();
+
+            return ServiceResult.SuccessResult("Image deleted successfully");
+        }
+
+        public async Task<IEnumerable<ApartmentImageDto>> GetApartmentImagesAsync(int apartmentId)
+        {
+            var apartment = await GetEntityByIdAsync(apartmentId);
+            if (apartment == null)
+                return null;
+
+            return apartment.ApartmentImages
+                .OrderBy(i => i.SortOrder)
+                .Select(i => new ApartmentImageDto
+                {
+                    ImageID = i.ImageID,
+                    ApartmentID = i.ApartmentID,
+                    ImageUrl = i.ImageUrl,
+                    IsPrimary = i.IsPrimary,
+                    Caption = i.Caption,
+                    SortOrder = i.SortOrder
+                });
+        }
+
+        public async Task<ApartmentImageDto> GetPrimaryImageAsync(int apartmentId)
+        {
+            var apartment = await GetEntityByIdAsync(apartmentId);
+            if (apartment == null)
+                return null;
+
+            var primaryImage = apartment.ApartmentImages.FirstOrDefault(i => i.IsPrimary) ??
+                              apartment.ApartmentImages.OrderBy(i => i.SortOrder).FirstOrDefault();
+
+            if (primaryImage == null)
+                return null;
+
+            return new ApartmentImageDto
+            {
+                ImageID = primaryImage.ImageID,
+                ApartmentID = primaryImage.ApartmentID,
+                ImageUrl = primaryImage.ImageUrl,
+                IsPrimary = primaryImage.IsPrimary,
+                Caption = primaryImage.Caption,
+                SortOrder = primaryImage.SortOrder
+            };
+        }
+
+        public async Task<IEnumerable<ApartmentMapDto>> GetApartmentsForMapAsync()
+        {
+            return await _dbSet
+                .Where(a => a.IsActive && a.Latitude.HasValue && a.Longitude.HasValue)
+                .Include(a => a.ApartmentImages)
+                .Select(a => new ApartmentMapDto
+                {
+                    ApartmentID = a.ApartmentID,
+                    Title = a.Title,
+                    PricePerNight = a.PricePerNight,
+                    Latitude = a.Latitude.Value,
+                    Longitude = a.Longitude.Value,
+                    PrimaryImageUrl = a.ApartmentImages
+                        .Where(i => i.IsPrimary)
+                        .Select(i => i.ImageUrl)
+                        .FirstOrDefault() ??
+                        a.ApartmentImages
+                        .OrderBy(i => i.SortOrder)
+                        .Select(i => i.ImageUrl)
+                        .FirstOrDefault()
+                })
                 .ToListAsync();
         }
 
-        // Add other apartment-related methods...
+        #endregion
 
-        // Example of create apartment method
-        public async Task<Apartment> CreateApartmentAsync(ApartmentCreateDto dto)
+        #region Private Helper Methods
+
+        private async Task AddAmenitiesToApartment(int apartmentId, int[] amenityIds)
         {
-            // Create and configure apartment
-            var apartment = new Apartment
+            foreach (var amenityId in amenityIds)
             {
-                Title = dto.Title,
-                Description = dto.Description,
-                Address = dto.Address,
-                Neighborhood = dto.Neighborhood,
-                PricePerNight = dto.PricePerNight,
-                Bedrooms = dto.Bedrooms,
-                Bathrooms = dto.Bathrooms,
-                MaxOccupancy = dto.MaxOccupancy,
-                SquareMeters = dto.SquareMeters,
-                PetFriendly = dto.PetFriendly,
-                PetFee = dto.PetFee,
-                Latitude = dto.Latitude,
-                Longitude = dto.Longitude,
-                CreatedDate = DateTime.Now,
-                IsActive = true
-            };
-
-            // Add apartment to database
-            _context.Apartments.Add(apartment);
-            await _context.SaveChangesAsync();
-
-            // Add selected amenities
-            if (dto.AmenityIds != null && dto.AmenityIds.Length > 0)
-            {
-                foreach (var amenityId in dto.AmenityIds)
+                var apartmentAmenity = new ApartmentAmenity
                 {
-                    var apartmentAmenity = new ApartmentAmenity
-                    {
-                        ApartmentID = apartment.ApartmentID,
-                        AmenityID = amenityId
-                    };
-                    _context.ApartmentAmenities.Add(apartmentAmenity);
-                }
-                await _context.SaveChangesAsync();
+                    ApartmentID = apartmentId,
+                    AmenityID = amenityId
+                };
+                _context.ApartmentAmenities.Add(apartmentAmenity);
             }
-
-            // Process images
-            await ProcessApartmentImagesAsync(apartment, dto);
-
-            return apartment;
+            await _context.SaveChangesAsync();
         }
 
-        // Helper methods for image processing
-        private async Task ProcessApartmentImagesAsync(Apartment apartment, ApartmentCreateDto dto)
+        private async Task UpdateApartmentAmenities(int apartmentId, int[] amenityIds)
+        {
+            // Remove existing amenities
+            var existingAmenities = _context.ApartmentAmenities
+                .Where(aa => aa.ApartmentID == apartmentId);
+            _context.ApartmentAmenities.RemoveRange(existingAmenities);
+
+            // Add new amenities
+            if (amenityIds != null && amenityIds.Length > 0)
+            {
+                await AddAmenitiesToApartment(apartmentId, amenityIds);
+            }
+        }
+
+        private async Task ProcessApartmentImages(Apartment apartment, ApartmentCreateDto createDto)
         {
             int sortOrder = 0;
 
-            // Handle primary image upload
-            if (dto.PrimaryImage != null && dto.PrimaryImage.Length > 0)
+            // Process primary image
+            if (createDto.PrimaryImage != null && createDto.PrimaryImage.Length > 0)
             {
-                string imageUrl = await _fileStorage.SaveFileAsync(dto.PrimaryImage, "images/apartments");
+                string imageUrl = await _fileStorage.SaveFileAsync(createDto.PrimaryImage, "images/apartments");
 
-                // Add image to database
-                var apartmentImage = new ApartmentImage
+                var primaryImage = new ApartmentImage
                 {
                     ApartmentID = apartment.ApartmentID,
                     ImageUrl = imageUrl,
                     IsPrimary = true,
                     SortOrder = sortOrder++,
-                    Caption = dto.PrimaryImageCaption
+                    Caption = createDto.PrimaryImageCaption
                 };
-                _context.ApartmentImages.Add(apartmentImage);
+                _context.ApartmentImages.Add(primaryImage);
             }
 
-            // Handle additional images
-            if (dto.AdditionalImages != null && dto.AdditionalImages.Count > 0)
+            // Process additional images
+            if (createDto.AdditionalImages != null && createDto.AdditionalImages.Count > 0)
             {
-                for (int i = 0; i < dto.AdditionalImages.Count; i++)
+                for (int i = 0; i < createDto.AdditionalImages.Count; i++)
                 {
-                    var image = dto.AdditionalImages[i];
-
-                    // Skip invalid files
-                    if (image == null || image.Length == 0)
-                        continue;
+                    var image = createDto.AdditionalImages[i];
+                    if (image == null || image.Length == 0) continue;
 
                     string imageUrl = await _fileStorage.SaveFileAsync(image, "images/apartments");
-
-                    // Get caption if available
                     string caption = null;
-                    if (dto.AdditionalImageCaptions != null && i < dto.AdditionalImageCaptions.Count)
+
+                    if (createDto.AdditionalImageCaptions != null &&
+                        i < createDto.AdditionalImageCaptions.Count)
                     {
-                        caption = dto.AdditionalImageCaptions[i];
+                        caption = createDto.AdditionalImageCaptions[i];
                     }
 
-                    // Add image to database
                     var apartmentImage = new ApartmentImage
                     {
                         ApartmentID = apartment.ApartmentID,
@@ -227,211 +417,101 @@ namespace ChabbyNb_API.Services
                 }
             }
 
-            // Save all images to database
             await _context.SaveChangesAsync();
         }
 
-        // Other methods for apartment management...
-
-        public async Task<bool> UpdateApartmentAsync(int id, ApartmentUpdateDto dto)
+        private async Task ProcessApartmentImages(Apartment apartment, ApartmentUpdateDto updateDto)
         {
-            if (id != dto.ApartmentID)
+            // Process new image if provided
+            if (updateDto.NewImage != null && updateDto.NewImage.Length > 0)
             {
-                return false;
-            }
+                string imageUrl = await _fileStorage.SaveFileAsync(updateDto.NewImage, "images/apartments");
 
-            // Find apartment
-            var apartment = await _context.Apartments.FindAsync(id);
-            if (apartment == null)
-            {
-                return false;
-            }
-
-            // Update apartment properties
-            apartment.Title = dto.Title;
-            apartment.Description = dto.Description;
-            apartment.Address = dto.Address;
-            apartment.Neighborhood = dto.Neighborhood;
-            apartment.PricePerNight = dto.PricePerNight;
-            apartment.Bedrooms = dto.Bedrooms;
-            apartment.Bathrooms = dto.Bathrooms;
-            apartment.MaxOccupancy = dto.MaxOccupancy;
-            apartment.SquareMeters = dto.SquareMeters;
-            apartment.PetFriendly = dto.PetFriendly;
-            apartment.PetFee = dto.PetFee;
-            apartment.Latitude = dto.Latitude;
-            apartment.Longitude = dto.Longitude;
-            apartment.IsActive = dto.IsActive;
-
-            try
-            {
-                _context.Entry(apartment).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
-
-                // Update amenities
-                // First remove all existing amenities
-                var existingAmenities = _context.ApartmentAmenities.Where(aa => aa.ApartmentID == apartment.ApartmentID);
-                _context.ApartmentAmenities.RemoveRange(existingAmenities);
-                await _context.SaveChangesAsync();
-
-                // Then add selected amenities
-                if (dto.AmenityIds != null && dto.AmenityIds.Length > 0)
+                // If setting as primary, update existing primary images
+                if (updateDto.SetAsPrimary)
                 {
-                    foreach (var amenityId in dto.AmenityIds)
+                    var existingPrimary = apartment.ApartmentImages.Where(i => i.IsPrimary);
+                    foreach (var img in existingPrimary)
                     {
-                        var apartmentAmenity = new ApartmentAmenity
-                        {
-                            ApartmentID = apartment.ApartmentID,
-                            AmenityID = amenityId
-                        };
-                        _context.ApartmentAmenities.Add(apartmentAmenity);
+                        img.IsPrimary = false;
                     }
-                    await _context.SaveChangesAsync();
                 }
 
-                // Process new images
-                // Similar to the process in CreateApartmentAsync but for updates
+                var maxSortOrder = apartment.ApartmentImages.Any() ?
+                    apartment.ApartmentImages.Max(i => i.SortOrder) : 0;
 
-                return true;
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!await ApartmentExistsAsync(id))
+                var newImage = new ApartmentImage
                 {
-                    return false;
-                }
-                else
-                {
-                    throw;
-                }
-            }
-        }
-
-        public async Task<bool> UpdateApartmentStatusAsync(int id, bool isActive)
-        {
-            var apartment = await _context.Apartments.FindAsync(id);
-            if (apartment == null)
-            {
-                return false;
-            }
-
-            apartment.IsActive = isActive;
-
-            try
-            {
+                    ApartmentID = apartment.ApartmentID,
+                    ImageUrl = imageUrl,
+                    IsPrimary = updateDto.SetAsPrimary,
+                    SortOrder = maxSortOrder + 1,
+                    Caption = updateDto.ImageCaption
+                };
+                _context.ApartmentImages.Add(newImage);
                 await _context.SaveChangesAsync();
-                return true;
             }
-            catch (DbUpdateConcurrencyException)
+
+            // Process additional images similar to create
+            if (updateDto.AdditionalImages != null && updateDto.AdditionalImages.Count > 0)
             {
-                if (!await ApartmentExistsAsync(id))
+                var maxSortOrder = apartment.ApartmentImages.Any() ?
+                    apartment.ApartmentImages.Max(i => i.SortOrder) : 0;
+
+                for (int i = 0; i < updateDto.AdditionalImages.Count; i++)
                 {
-                    return false;
+                    var image = updateDto.AdditionalImages[i];
+                    if (image == null || image.Length == 0) continue;
+
+                    string imageUrl = await _fileStorage.SaveFileAsync(image, "images/apartments");
+                    string caption = null;
+
+                    if (updateDto.AdditionalImageCaptions != null &&
+                        i < updateDto.AdditionalImageCaptions.Count)
+                    {
+                        caption = updateDto.AdditionalImageCaptions[i];
+                    }
+
+                    var apartmentImage = new ApartmentImage
+                    {
+                        ApartmentID = apartment.ApartmentID,
+                        ImageUrl = imageUrl,
+                        IsPrimary = false,
+                        SortOrder = ++maxSortOrder,
+                        Caption = caption
+                    };
+                    _context.ApartmentImages.Add(apartmentImage);
                 }
-                else
-                {
-                    throw;
-                }
+                await _context.SaveChangesAsync();
             }
         }
 
-        public async Task<bool> DeleteApartmentImageAsync(int apartmentId, int imageId)
-        {
-            var image = await _context.ApartmentImages
-                .FirstOrDefaultAsync(i => i.ImageID == imageId && i.ApartmentID == apartmentId);
+        #endregion
+    }
 
-            if (image == null)
-            {
-                return false;
-            }
-
-            // Delete the file from storage
-            try
-            {
-                string fileName = image.ImageUrl.TrimStart('/').Split('/').Last();
-                await _fileStorage.DeleteFileAsync(image.ImageUrl);
-            }
-            catch (Exception)
-            {
-                // Log error but continue
-            }
-
-            _context.ApartmentImages.Remove(image);
-            await _context.SaveChangesAsync();
-
-            return true;
-        }
-
-        public async Task<List<ApartmentImageDto>> GetApartmentImagesAsync(int apartmentId)
-        {
-            // Validate apartment exists
-            var apartment = await _context.Apartments.FindAsync(apartmentId);
-            if (apartment == null)
-            {
-                return null;
-            }
-
-            var images = await _context.ApartmentImages
-                .Where(i => i.ApartmentID == apartmentId)
-                .OrderBy(i => i.SortOrder)
-                .Select(i => new ApartmentImageDto
-                {
-                    ImageID = i.ImageID,
-                    ApartmentID = i.ApartmentID,
-                    ImageUrl = i.ImageUrl,
-                    IsPrimary = i.IsPrimary,
-                    Caption = i.Caption,
-                    SortOrder = i.SortOrder
-                })
-                .ToListAsync();
-
-            return images;
-        }
-
-        public async Task<ApartmentImageDto> GetPrimaryImageAsync(int apartmentId)
-        {
-            // Validate apartment exists
-            var apartment = await _context.Apartments.FindAsync(apartmentId);
-            if (apartment == null || !apartment.IsActive)
-            {
-                return null;
-            }
-
-            // Find the primary image
-            var primaryImage = await _context.ApartmentImages
-                .Where(i => i.ApartmentID == apartmentId && i.IsPrimary)
-                .FirstOrDefaultAsync();
-
-            // If no primary image is set, try to get the first image
-            if (primaryImage == null)
-            {
-                primaryImage = await _context.ApartmentImages
-                    .Where(i => i.ApartmentID == apartmentId)
-                    .OrderBy(i => i.SortOrder)
-                    .FirstOrDefaultAsync();
-            }
-
-            if (primaryImage == null)
-            {
-                return null;
-            }
-
-            var imageDto = new ApartmentImageDto
-            {
-                ImageID = primaryImage.ImageID,
-                ApartmentID = primaryImage.ApartmentID,
-                ImageUrl = primaryImage.ImageUrl,
-                IsPrimary = primaryImage.IsPrimary,
-                Caption = primaryImage.Caption,
-                SortOrder = primaryImage.SortOrder
-            };
-
-            return imageDto;
-        }
-
-        private async Task<bool> ApartmentExistsAsync(int id)
-        {
-            return await _context.Apartments.AnyAsync(e => e.ApartmentID == id);
-        }
+    // Add missing DTO for apartment list view
+    public class ApartmentDto
+    {
+        public int ApartmentID { get; set; }
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public string Address { get; set; }
+        public string Neighborhood { get; set; }
+        public decimal PricePerNight { get; set; }
+        public int Bedrooms { get; set; }
+        public int Bathrooms { get; set; }
+        public int MaxOccupancy { get; set; }
+        public int? SquareMeters { get; set; }
+        public bool PetFriendly { get; set; }
+        public decimal? PetFee { get; set; }
+        public decimal? Latitude { get; set; }
+        public decimal? Longitude { get; set; }
+        public bool IsActive { get; set; }
+        public string PrimaryImageUrl { get; set; }
+        public double AverageRating { get; set; }
+        public int ReviewCount { get; set; }
+        public List<ApartmentImageDto> Images { get; set; } = new List<ApartmentImageDto>();
+        public List<AmenityDto> Amenities { get; set; } = new List<AmenityDto>();
     }
 }
+
